@@ -3,14 +3,14 @@ import com.amazonaws.regions.{Region, Regions}
 import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport._
 
 lazy val sumologicKafkaPush =
-  Project(id = "sumo-push", base = file("."))
+  Project(id = "sumologic-kafka-push", base = file("."))
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(AshScriptPlugin)
     .enablePlugins(DockerPlugin)
     .enablePlugins(EcrPlugin)
     .enablePlugins(BuildInfoPlugin)
     .settings(
-      name := "sumo-push",
+      name := "sumologic-kafka-push",
       organization := "com.sumologic.kafkapush",
       scalaVersion := Version.Scala,
       organizationName := "SumoLogic",
