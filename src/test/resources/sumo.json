@@ -1,0 +1,12 @@
+{
+  "log": "I0416 19:32:53.813537       1 utils.go:467] Removing unregistered node aws:///us-west-2c/i-testtesttest1test\n",
+  "stream": "stderr",
+  "time": "2020-04-16T19:32:53.813599999Z",
+  "_sumo_metadata": {
+    "log_format": "fields",
+    "host": "",
+    "source": "kube-system.kube-cluster-autoscaler-aws-cluster-autoscaler-7c99cc9db8-6zbtn.aws-cluster-autoscaler",
+    "category": "kubernetes/kube/system/kube/cluster/autoscaler/aws/cluster/autoscaler",
+    "fields": "container_id=f2b9831ab99d136ef3bc801262a7e2eb288568ef44dbf537ea92e6f665e6test,pod_labels_app.kubernetes.io/instance=kube-cluster-autoscaler,pod_labels_app.kubernetes.io/name=aws-cluster-autoscaler,pod_labels_pod-template-hash=7c99cctest,container=aws-cluster-autoscaler,namespace=kube-system,pod=kube-cluster-autoscaler-aws-cluster-autoscaler-7c99cctest-6test,pod_id=ce0b268e-7e6c-11ea-a3f5-06e88925test,host=ip-10-0-0-184.us-west-2.compute.internal,master_url=https://172.0.1.1:443/api,namespace_id=a0e11d77-7dfc-11ea-a3f5-06e88925test,service=kube-cluster-autoscaler-aws-cluster-autoscaler,deployment=kube-cluster-autoscaler-aws-cluster-autoscaler,replicaset=kube-cluster-autoscaler-aws-cluster-autoscaler-7c99cctest,node=ip-10-0-0-184.us-west-2.compute.internal"
+  }
+}

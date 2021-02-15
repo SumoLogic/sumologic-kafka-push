@@ -1,0 +1,22 @@
+<configuration>
+    <variable name="AKKA_LOG_LEVEL" value="${AKKA_LOG_LEVEL:-info}"/>
+    <variable name="SUMO_LOG_LEVEL" value="${SUMO_LOG_LEVEL:-debug}" />
+    <variable name="ROOT_LOG_LEVEL" value="${ROOT_LOG_LEVEL:-info}"/>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss,SSS} %-5level [%.21thread]  %logger{10} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="akka" level="${AKKA_LOG_LEVEL}" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="com.sumologic" level="${SUMO_LOG_LEVEL}" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <root level="${ROOT_LOG_LEVEL}">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

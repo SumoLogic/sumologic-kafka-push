@@ -1,0 +1,22 @@
+{
+  "file": "/var/log/pods/kute-test-0_5712test-244f-4743-aaa1-e8069a65test/logs/0.log",
+  "kns": "test",
+  "kubernetes": {
+    "container_name": "test",
+    "container_image": "docker/test",
+    "pod_labels": {
+      "app": "kube-test",
+      "controller-revision-hash": "kube-test-7b78d5test",
+      "statefulset.kubernetes.io/pod-name": "kube-test-0"
+    },
+    "pod_node_name": "ec2",
+    "pod_name": "kube-test-0",
+    "pod_namespace": "test",
+    "pod_uid": "beefbeef-beef-beef-aaa1-beefbeefbeef"
+  },
+  "log_start": "2020-05-29 18:02:37",
+  "message": "2020-05-29 18:02:37.505199 I | http: TLS handshake error from 10.0.0.176:57946: remote error: tls: bad certificate\\nINFO             Round trip: GET https://172.1.0.1:443/api/v1/namespaces/test/pods?limit=500, code: 200, duration: 4.23751ms tls:version: 303 forward/fwd.go:196",
+  "source_type": "kubernetes_logs",
+  "stream": "stderr",
+  "timestamp": "2020-05-29T18:02:37.505244795Z"
+}
