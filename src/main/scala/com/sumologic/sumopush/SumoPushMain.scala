@@ -65,6 +65,17 @@ object SumoPushMain {
         .resolve()
     } else ConfigFactory.load()
 
-    ActorSystem(SumoPushMain(AppConfig(config)).behavior, "sumo-push-main", config)
+    val dataType = SumoDataType.withName(config.getString("sumopush.dataType"))
+    val appConfig = AppConfig(dataType, dataType match {
+      case SumoDataType.logs =>
+        println("logs")
+        config.withoutPath("endpoints.metrics")
+      case SumoDataType.metrics =>
+        println("metrics")
+        config.withoutPath("endpoints.logs")
+      case t => throw new UnsupportedOperationException(s"invalid data type $t")
+    })
+
+    ActorSystem(SumoPushMain(appConfig).behavior, "sumo-push-main", config)
   }
 }

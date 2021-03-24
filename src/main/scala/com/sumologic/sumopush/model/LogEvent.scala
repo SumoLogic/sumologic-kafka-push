@@ -16,7 +16,7 @@ trait PodMetadata extends KubernetesLogEventMetadata {
   val namespace: String
   val nodeName: String
   val container: String
-  val containerImage: String
+  val containerImage: Option[String]
   val annotations: Map[String, String]
   val labels: Map[String, String]
 }

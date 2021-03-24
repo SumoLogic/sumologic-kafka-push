@@ -62,10 +62,10 @@ object LogConsumer {
       .withStopTimeout(Duration.Zero)
     val committerSettings = CommitterSettings(system)
 
-    val control = Consumer.committableSource(settings, Subscriptions.topics(config.topic))
+    val control = Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic))
       .via(ActorFlow.ask(10)(logProcessor) {
         (message: CommittableMessage[String, Try[LogEvent[Any]]], replyTo: ActorRef[(Option[Seq[SumoRequest]], CommittableOffset)]) =>
-          ConsumerLogMessage(message.record.key(), message.record.value(), message.committableOffset, replyTo)
+          ConsumerLogMessage(message.record, message.committableOffset, replyTo)
       })
       .mapConcat {
         case (Some(requests), offset) => ((Some(requests.head), Some(offset)) +: requests.drop(1).map(r => (Some(r), None))).toList

@@ -10,7 +10,7 @@ import scala.jdk.CollectionConverters._
 
 object AppConfig {
 
-  def apply(config: Config): AppConfig = {
+  def apply(dataType: SumoDataType.Value, config: Config): AppConfig = {
     val kafkaConfig = config.getConfig("sumopush.kafka")
     val apiRetryConfig = config.getConfig("sumopush.apiRetry")
     val endpoints = createEndpoints(config.getConfig("endpoints"))
@@ -23,7 +23,7 @@ object AppConfig {
       endpoints = endpoints,
       sumoEndpoints = endpoints.flatMap(ep => ep.name.map(_ -> ep)).toMap,
       cluster = config.getString("sumopush.cluster"),
-      dataType = SumoDataType.withName(config.getString("sumopush.dataType")),
+      dataType = dataType,
       groupedSize = config.getInt("sumopush.grouped.size"),
       groupedDuration = FiniteDuration(config.getDuration("sumopush.grouped.duration").toNanos, TimeUnit.NANOSECONDS),
       sendBuffer = config.getInt("sumopush.send.buffer"),
