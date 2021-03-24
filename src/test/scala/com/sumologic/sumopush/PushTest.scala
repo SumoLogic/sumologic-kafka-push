@@ -1,15 +1,16 @@
 package com.sumologic.sumopush
 
-import java.time.Instant
-
 import com.sumologic.sumopush.model._
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should._
 
+import java.time.Instant
+
 class PromMetricModelSpec extends AnyFlatSpec with Matchers {
   val cfg: Config = ConfigFactory.load()
-  val appConfig: AppConfig = AppConfig(cfg)
+  val dataType: SumoDataType.Value = SumoDataType.withName(cfg.getString("sumopush.dataType"))
+  val appConfig: AppConfig = AppConfig(dataType, cfg)
 
   "PromMetricEvent" should "serialize/deserialize properly" in {
     val promMetricJson =

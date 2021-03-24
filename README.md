@@ -1,4 +1,5 @@
-# sumologic-kafka-push
-Utility for reading logs from a Kafka Topic and sending to Sumo Logic.
+# Refresh Docker Login
+`aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/sumologic`
 
-This project is in an alpha state but fully functional. It is in the process of being converted from an internal tool to an open source project. Documentation, tests, and improvements to come.
+# Local Publish
+`sbt docker:publishLocal`

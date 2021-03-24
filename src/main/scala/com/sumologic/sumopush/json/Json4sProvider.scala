@@ -11,6 +11,7 @@ import java.{lang, util}
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
 
+//noinspection ScalaDeprecation
 object Json4sProvider extends JsonProvider {
   implicit val formats: Formats = DefaultFormats
 

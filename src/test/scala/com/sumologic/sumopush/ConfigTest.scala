@@ -8,7 +8,8 @@ import org.scalatest.matchers.should._
 
 class ConfigTest extends AnyFlatSpec with Matchers {
   val cfg: Config = ConfigFactory.load()
-  val appConfig: AppConfig = AppConfig(cfg)
+  val dataType: SumoDataType.Value = SumoDataType.withName(cfg.getString("sumopush.dataType"))
+  val appConfig: AppConfig = AppConfig(dataType, cfg)
 
   "config" should "load properly" in {
     assert(cfg.getString("sumopush.cluster") == "default")

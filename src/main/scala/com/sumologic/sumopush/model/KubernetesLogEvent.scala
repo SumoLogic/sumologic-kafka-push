@@ -3,9 +3,9 @@ package com.sumologic.sumopush.model
 import org.json4s.JsonAST.JValue
 import org.json4s.JsonDSL._
 import org.json4s.native.Serialization
-import org.json4s.{CustomSerializer, DefaultFormats, Extraction, Formats, StreamInput}
+import org.json4s.{CustomSerializer, DefaultFormats, Extraction, Formats}
 
-import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneOffset, ZonedDateTime}
 
@@ -19,7 +19,7 @@ case class KubernetesPodMetadata(name: String,
                                  namespace: String,
                                  nodeName: String,
                                  container: String,
-                                 containerImage: String,
+                                 containerImage: Option[String],
                                  annotations: Map[String, String],
                                  labels: Map[String, String]) extends PodMetadata
 
@@ -43,7 +43,7 @@ object KubernetesLogEventSerializer extends CustomSerializer[KubernetesLogEvent]
 
   def toJson(logEvent: LogEvent[String]): String = Serialization.write(logEvent)
 
-  def fromJson(message: Array[Byte]): KubernetesLogEvent = Serialization.read[KubernetesLogEvent](StreamInput(new ByteArrayInputStream(message)))
+  def fromJson(message: Array[Byte]): KubernetesLogEvent = Serialization.read[KubernetesLogEvent](new String(message, UTF_8))
 
   def fromJson(message: String): KubernetesLogEvent = Serialization.read[KubernetesLogEvent](message)
 }
@@ -57,7 +57,7 @@ object KubernetesSerializer extends CustomSerializer[KubernetesPodMetadata](_ =>
       namespace = (v \ "pod_namespace").extract[String],
       nodeName = (v \ "pod_node_name").extract[String],
       container = (v \ "container_name").extract[String],
-      containerImage = (v \ "container_image").extract[String],
+      containerImage = (v \ "container_image").extractOpt[String],
       annotations = (v \ "pod_annotations").extractOrElse[Map[String, String]](Map.empty),
       labels = (v \ "pod_labels").extractOrElse[Map[String, String]](Map.empty)
     )

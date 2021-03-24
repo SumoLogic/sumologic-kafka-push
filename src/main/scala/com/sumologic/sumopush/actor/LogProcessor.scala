@@ -9,6 +9,7 @@ import com.sumologic.sumopush.AppConfig
 import com.sumologic.sumopush.model.SumoDataFormat.Format
 import com.sumologic.sumopush.model._
 import io.prometheus.client.Counter
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.json4s.JsonAST.JObject
 import org.json4s.{DefaultFormats, Formats}
 import org.slf4j.{Logger, LoggerFactory}
@@ -57,20 +58,19 @@ object LogProcessor {
   val EndpointFilterAnnotationPrefix = s"$MetadataKeyPrefix/filter"
   val SourceNameAnnotationPrefix = s"$MetadataKeyPrefix/source.name"
 
-  sealed trait LogMessage {
-    val key: AnyRef
-    val logEvent: Try[LogEvent[Any]]
+  sealed trait LogMessage[K] {
+    val record: ConsumerRecord[K, Try[LogEvent[Any]]]
   }
 
-  case class ConsumerLogMessage(key: AnyRef, logEvent: Try[LogEvent[Any]], offset: CommittableOffset, replyTo: ActorRef[(Option[Seq[SumoRequest]], CommittableOffset)]) extends LogMessage
+  case class ConsumerLogMessage[K](record: ConsumerRecord[K, Try[LogEvent[Any]]], offset: CommittableOffset, replyTo: ActorRef[(Option[Seq[SumoRequest]], CommittableOffset)]) extends LogMessage[K]
 
-  def apply(config: AppConfig): Behavior[LogMessage] = Behaviors.setup { context =>
-    Behaviors.receiveMessage[LogMessage] {
-      case ConsumerLogMessage(key, logEvent, offset, replyTo) =>
-        context.system.log.trace("log key: {}", key)
-        val reply = logEvent match {
+  def apply(config: AppConfig): Behavior[LogMessage[_]] = Behaviors.setup { context =>
+    Behaviors.receiveMessage[LogMessage[_]] {
+      case ConsumerLogMessage(record, offset, replyTo) =>
+        context.system.log.trace("log key: {}", record.key())
+        val reply = record.value() match {
           case Success(log@JsonLogEvent(_)) =>
-            val requests = createSumoRequestsFromLogEvent(config, log)
+            val requests = createSumoRequestsFromLogEvent(config, record.topic(), log)
             requests.foreach(request => messages_processed.labels(request.key.value, request.endpointName).inc())
             (Some(requests), offset)
           case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
@@ -101,7 +101,7 @@ object LogProcessor {
     }
   }
 
-  def createSumoRequestsFromLogEvent(config: AppConfig, logEvent: JsonLogEvent): Seq[SumoRequest] = {
+  def createSumoRequestsFromLogEvent(config: AppConfig, topic: String, logEvent: JsonLogEvent): Seq[SumoRequest] = {
     implicit val formats: Formats = DefaultFormats
     val endpoint = config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.map(_._2).get
     val jsonOptions = endpoint.jsonOptions.map(opts => (opts.sourceCategoryJsonPath, opts.fieldJsonPaths, opts.payloadJsonPath))
@@ -109,10 +109,10 @@ object LogProcessor {
 
     val sourceCategory = jsonOptions match {
       case (Some(jp), _, _) => jp.read(logEvent.message).asInstanceOf[String] match {
-        case null | "" => config.topic
+        case null | "" => topic
         case v => v
       }
-      case _ => config.topic
+      case _ => topic
     }
 
     val wrapperKey = endpoint.jsonOptions.flatMap(_.payloadWrapperKey)
@@ -120,16 +120,16 @@ object LogProcessor {
     val payload = (jsonOptions match {
       case (_, _, Some(jp)) => jp.read(logEvent.message).asInstanceOf[Any] match {
         case s: String => s
-        case m: Map[String, Any] => m
+        case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
         case jo: JObject => jo.extract[Map[String, Any]]
         case _ => logEvent.message.extract[Map[String, Any]]
       }
       case _ => logEvent.message.extract[Map[String, Any]]
     }) match {
       case s: String => Map(wrapperKey.getOrElse("log") -> s)
-      case m: Map[String, Any] => wrapperKey match {
+      case m: Map[_, _] => wrapperKey match {
         case Some(wk) => Map(wk -> m)
-        case None => m
+        case None => m.asInstanceOf[Map[String, Any]]
       }
     }
 

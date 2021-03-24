@@ -1,4 +1,4 @@
-FROM ubuntu:groovy
+FROM ubuntu:focal
 LABEL MAINTAINER Cecil Moore <cmoore@sumologic.com>
 
 RUN  apt-get update && apt-get install java-common -y && apt-get install -y curl && apt-get clean && rm -rf /var/lib/apt/lists
