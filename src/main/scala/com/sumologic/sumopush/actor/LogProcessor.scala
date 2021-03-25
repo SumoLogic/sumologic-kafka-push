@@ -5,6 +5,7 @@ import akka.actor.typed.{ActorRef, Behavior, Terminated}
 import akka.kafka.ConsumerMessage.CommittableOffset
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
 import com.google.re2j.Pattern
+import com.jayway.jsonpath.JsonPath
 import com.sumologic.sumopush.AppConfig
 import com.sumologic.sumopush.model.SumoDataFormat.Format
 import com.sumologic.sumopush.model._
@@ -104,21 +105,18 @@ object LogProcessor {
   def createSumoRequestsFromLogEvent(config: AppConfig, topic: String, logEvent: JsonLogEvent): Seq[SumoRequest] = {
     implicit val formats: Formats = DefaultFormats
     val endpoint = config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.map(_._2).get
-    val jsonOptions = endpoint.jsonOptions.map(opts => (opts.sourceCategoryJsonPath, opts.fieldJsonPaths, opts.payloadJsonPath))
-      .getOrElse((None, None, None))
+    val jsonOptions = endpoint.jsonOptions.map(opts => (opts.fieldJsonPaths, opts.payloadJsonPath))
+      .getOrElse((None, None))
 
-    val sourceCategory = jsonOptions match {
-      case (Some(jp), _, _) => jp.read(logEvent.message).asInstanceOf[String] match {
-        case null | "" => topic
-        case v => v
-      }
-      case _ => topic
-    }
+    val sourceCategory = findSourceNameOrCategory(endpoint.jsonOptions.flatMap(opts => opts.sourceCategoryFixed),
+                           endpoint.jsonOptions.flatMap(opts => opts.sourceCategoryJsonPath), topic, logEvent)
+    val sourceName = findSourceNameOrCategory(endpoint.jsonOptions.flatMap(opts => opts.sourceNameFixed),
+                       endpoint.jsonOptions.flatMap(opts => opts.sourceNameJsonPath), topic, logEvent)
 
     val wrapperKey = endpoint.jsonOptions.flatMap(_.payloadWrapperKey)
 
     val payload = (jsonOptions match {
-      case (_, _, Some(jp)) => jp.read(logEvent.message).asInstanceOf[Any] match {
+      case (_, Some(jp)) => jp.read(logEvent.message).asInstanceOf[Any] match {
         case s: String => s
         case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
         case jo: JObject => jo.extract[Map[String, Any]]
@@ -134,7 +132,7 @@ object LogProcessor {
     }
 
     val fields: Map[String, String] = jsonOptions match {
-      case (_, Some(m), _) => m.map { case (key, path) => (key, path.read(logEvent.message).asInstanceOf[Any]) }
+      case (Some(m), _) => m.map { case (key, path) => (key, path.read(logEvent.message).asInstanceOf[Any]) }
         .collect { case (k: String, v: String) => (k, v) }
       case _ => Map.empty
     }
@@ -144,13 +142,25 @@ object LogProcessor {
       dataType = SumoDataType.logs,
       format = SumoDataFormat.json,
       endpointName = endpoint.name.getOrElse("default"),
-      sourceName = "sumo-kafka-push",
+      sourceName = sourceName,
       sourceCategory = sourceCategory,
       sourceHost = config.host,
       fields = Seq.empty,
       endpoint = endpoint.uri,
       logs = Seq(RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ payload.toSeq ++ fields.toSeq).toMap))
     ))
+  }
+
+  def findSourceNameOrCategory(fixed: Option[String], jsonPath: Option[JsonPath], topic: String, logEvent: JsonLogEvent): String = {
+    val jsonOpts =  (fixed, jsonPath)
+    jsonOpts match {
+      case (Some(fixed), _) => fixed
+      case (_, Some(jp)) => jp.read(logEvent.message).asInstanceOf[String] match {
+        case null | "" => topic
+        case v => v
+      }
+      case _ => topic
+    }
   }
 
   def createSumoRequestsFromLogEvent(config: AppConfig, logEvent: KubernetesLogEvent): Seq[SumoRequest] = {
