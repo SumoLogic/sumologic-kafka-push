@@ -29,6 +29,9 @@ case class SumoEndpoint(name: Option[String],
 }
 
 case class JsonOptions(sourceCategoryJsonPath: Option[JsonPath],
+                       sourceCategoryFixed: Option[String],
+                       sourceNameJsonPath: Option[JsonPath],
+                       sourceNameFixed: Option[String],
                        fieldJsonPaths: Option[Map[String, JsonPath]],
                        payloadWrapperKey: Option[String],
                        payloadJsonPath: Option[JsonPath])
@@ -60,6 +63,9 @@ object JsonOptionsSerializer extends CustomSerializer[JsonOptions](_ => ( {
     implicit val formats: Formats = DefaultFormats
     JsonOptions(
       sourceCategoryJsonPath = (v \ "sourceCategoryJsonPath").extractOpt[String].map(JsonPath.compile(_)),
+      sourceCategoryFixed = (v \ "sourceCategoryFixed").extractOpt[String],
+      sourceNameJsonPath = (v \ "sourceNameJsonPath").extractOpt[String].map(JsonPath.compile(_)),
+      sourceNameFixed = (v \ "sourceNameFixed").extractOpt[String],
       fieldJsonPaths = (v \ "fieldJsonPaths").extractOpt[Map[String, String]].map { m => m map { case (k, v) => (k, JsonPath.compile(v)) } },
       payloadWrapperKey = (v \ "payloadWrapperKey").extractOpt[String],
       payloadJsonPath = (v \ "payloadJsonPath").extractOpt[String].map(JsonPath.compile(_))
