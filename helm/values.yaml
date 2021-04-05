@@ -1,0 +1,36 @@
+---
+image: 246946804217.dkr.ecr.us-west-2.amazonaws.com/sumologic/sumologic-kafka-push:0.3.2
+metricsPort: 8080
+logLevel: warn
+
+replicas: 1
+dataType: logs
+groupedSize: 30000
+groupedDuration: '1s'
+endpointsSecret: endpoints-logs
+
+containerExclusions: null
+endpointNames: null
+sourceCategories: null
+sourceNames: null
+
+servicemonitor:
+  labels: {}
+
+kafka:
+  bootstrapServers: localhost:9092
+  topic: sumo-push-logs
+  consumerGroup: sumopush-logs
+
+autoscale:
+  type: keda
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  keda:
+    ratePerSecond: 9000
+    cooldownPeriod: 1200
+    pollingInterval: 30
+    lagThreshold: '90'
+    prometheus: http://thanos-query.{{ .Values.cluster }}-zaidan.svc:10902
+  hpa:
+    cpuThreshold: 90
