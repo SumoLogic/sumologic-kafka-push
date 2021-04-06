@@ -83,7 +83,7 @@ object MetricConsumer {
       .via(ActorFlow.ask(10)(metricPusher) {
         (flow: (Option[SumoRequest], Seq[CommittableOffset]), replyTo: ActorRef[Seq[CommittableOffset]]) => SumoApiRequest(flow, replyTo)
       })
-      .mergeSubstreams
+      .mergeSubstreamsWithParallelism(10)
       .mapConcat(identity)
       .toMat(Committer.sink(committerSettings))(Keep.both)
       .mapMaterializedValue(DrainingControl.apply[Done])
