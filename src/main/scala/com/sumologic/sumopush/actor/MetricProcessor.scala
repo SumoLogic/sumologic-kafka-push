@@ -1,13 +1,13 @@
 package com.sumologic.sumopush.actor
 
-import java.util.regex.Pattern
-
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.kafka.ConsumerMessage.CommittableOffset
 import com.sumologic.sumopush.AppConfig
 import com.sumologic.sumopush.model._
 import io.prometheus.client.Counter
+
+import java.util.regex.Pattern
 
 object MetricProcessor {
   final val messages_processed = Counter.build()
@@ -25,28 +25,28 @@ object MetricProcessor {
   sealed trait MetricMessage {}
 
   case class ConsumerMetricMessage(msg: Option[PromMetricEvent], offset: CommittableOffset,
-                                   replyTo: ActorRef[(Option[SumoRequest], CommittableOffset)]) extends MetricMessage
+                                   replyTo: ActorRef[(Option[SumoRequest], Option[CommittableOffset])]) extends MetricMessage
 
   def apply(config: AppConfig): Behavior[MetricMessage] = Behaviors.receive { (context, message) =>
     message match {
       case ConsumerMetricMessage(Some(pme), offset, replyTo) =>
         val reply = if (ignoreMetric(config, pme)) {
           messages_ignored.labels(if (pme.labels.contains("container")) pme.labels("container") else "").inc()
-          (None, offset)
+          (None, Some(offset))
         } else {
           config.getMetricEndpoint(pme) match {
             case Some(endpoint@SumoEndpoint(Some(name), _, _, _, _, _)) =>
               context.log.trace("sumo endpoint name: {}", name)
               messages_processed.labels(if (pme.labels.contains("container")) pme.labels("container") else "", name).inc()
-              (Some(createSumoRequestFromLogEvent(config, endpoint, pme)), offset)
+              (Some(createSumoRequestFromLogEvent(config, endpoint, pme)), Some(offset))
             case _ =>
               messages_ignored.labels(if (pme.labels.contains("container")) pme.labels("container") else "").inc()
-              (None, offset)
+              (None, Some(offset))
           }
         }
         replyTo ! reply
       case ConsumerMetricMessage(None, offset, replyTo) =>
-        replyTo ! ((None, offset))
+        replyTo ! ((None, Some(offset)))
     }
     Behaviors.same
   }

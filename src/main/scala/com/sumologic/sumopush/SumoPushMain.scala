@@ -4,23 +4,29 @@ import akka.NotUsed
 import akka.actor.CoordinatedShutdown
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
+import akka.kafka.scaladsl.Consumer
+import akka.kafka.{ConsumerSettings, Subscriptions}
 import com.jayway.jsonpath
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.spi.json.JsonProvider
 import com.jayway.jsonpath.spi.mapper.{JacksonMappingProvider, MappingProvider}
 import com.sumologic.sumopush.actor.ConsumerCommand.ConsumerShutdown
 import com.sumologic.sumopush.actor.MetricsServer._
-import com.sumologic.sumopush.actor.{LogConsumer, MetricConsumer, MetricsK8sMetadataCache, MetricsServer}
+import com.sumologic.sumopush.actor._
 import com.sumologic.sumopush.json.Json4sProvider
 import com.sumologic.sumopush.model.SumoDataType
+import com.sumologic.sumopush.serde.{LogEventSerde, PromMetricEventSerde}
 import com.typesafe.config.ConfigFactory
-import org.slf4j.LoggerFactory
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.common.serialization.StringDeserializer
+import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.File
 import java.util
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.jdk.CollectionConverters._
+import scala.reflect.runtime.universe
 
 object SumoPushMain {
   def apply(config: AppConfig): Behavior[NotUsed] = Behaviors.supervise(
@@ -30,11 +36,13 @@ object SumoPushMain {
       val k8sMetadataCache = context.spawn(MetricsK8sMetadataCache(), "k8s-meta-cache")
       val metricsServer = context.spawn(MetricsServer(config), "metrics-server")
       val consumer = config.dataType match {
-        case SumoDataType.logs => context.spawn(LogConsumer(config), "log-consumer")
+        case SumoDataType.logs =>
+          val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, loadSerde(context.log, config.serdeClass)))
+          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => LogsFlow(config, context)), "log-consumer")
         case SumoDataType.metrics =>
-          context.spawn(MetricConsumer(config, k8sMetadataCache), "metric-consumer")
+          val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, PromMetricEventSerde))
+          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topics(config.topic)), context => MetricsFlow(config, context, k8sMetadataCache)), "metric-consumer")
       }
-      context.watch(consumer)
 
       CoordinatedShutdown(context.system).addJvmShutdownHook {
         consumer ! ConsumerShutdown
@@ -44,6 +52,25 @@ object SumoPushMain {
       Behaviors.same
     }
   ).onFailure[DeathPactException](akka.actor.typed.SupervisorStrategy.stop)
+
+  def loadSerde(log: Logger, className: String): LogEventSerde[Any] = {
+    try {
+      val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
+      val module = runtimeMirror.staticModule(className)
+      runtimeMirror.reflectModule(module).instance.asInstanceOf[LogEventSerde[Any]]
+    } catch {
+      case e: Throwable =>
+        log.error("failed to load kafka serde", e)
+        sys.exit(1)
+    }
+  }
+
+  def commonConsumerSettings[K, V](config: AppConfig, settings: ConsumerSettings[K, V]): ConsumerSettings[K, V] = {
+    settings.withBootstrapServers(bootstrapServers = config.bootstrapServers)
+      .withGroupId(config.consumerGroupId)
+      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, config.offsetReset)
+      .withStopTimeout(Duration.Zero)
+  }
 
   def main(args: Array[String]): Unit = {
     val log = LoggerFactory.getLogger(getClass)
@@ -68,10 +95,8 @@ object SumoPushMain {
     val dataType = SumoDataType.withName(config.getString("sumopush.dataType"))
     val appConfig = AppConfig(dataType, dataType match {
       case SumoDataType.logs =>
-        println("logs")
         config.withoutPath("endpoints.metrics")
       case SumoDataType.metrics =>
-        println("metrics")
         config.withoutPath("endpoints.logs")
       case t => throw new UnsupportedOperationException(s"invalid data type $t")
     })

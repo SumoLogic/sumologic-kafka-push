@@ -4,7 +4,7 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import com.google.common.cache.{Cache, CacheBuilder}
-import com.sumologic.sumopush.actor.MetricConsumer.ParsedMetricMessage
+import com.sumologic.sumopush.actor.MetricsFlow.ParsedMetricMessage
 import io.prometheus.client.Counter
 import org.slf4j.{Logger, LoggerFactory}
 import scalacache._
