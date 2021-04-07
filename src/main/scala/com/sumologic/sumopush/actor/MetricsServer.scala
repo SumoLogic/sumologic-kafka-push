@@ -1,8 +1,8 @@
 package com.sumologic.sumopush.actor
 
-import akka.actor.typed.{Behavior, PostStop}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
+import akka.actor.typed.{Behavior, PostStop}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import com.lonelyplanet.prometheus.PrometheusResponseTimeRecorder
@@ -13,6 +13,7 @@ import io.prometheus.client.hotspot.DefaultExports
 import scala.util.{Failure, Success}
 
 object MetricsServer {
+
   sealed trait Message
 
   private final case class StartFailed(cause: Throwable) extends Message
@@ -29,8 +30,8 @@ object MetricsServer {
     val metricsEndpoint = new MetricsEndpoint(prometheusRegistry)
 
     val routes = metricsEndpoint.routes
-    val bindFuture = Http().bindAndHandle(routes, interface = "0.0.0.0",
-      port = config.metricsServerPort)
+    val bindFuture = Http().newServerAt(interface = "0.0.0.0", port = config.metricsServerPort)
+      .bindFlow(routes)
     ctx.pipeToSelf(bindFuture) {
       case Success(binding) => Started(binding)
       case Failure(ex) => StartFailed(ex)
