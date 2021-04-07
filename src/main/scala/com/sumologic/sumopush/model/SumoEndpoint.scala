@@ -14,6 +14,8 @@ case class SumoEndpoint(name: Option[String],
                         jsonOptions: Option[JsonOptions],
                         fieldName: Option[String],
                         fieldPattern: Option[Pattern],
+                        sourceCategory: Option[String],
+                        sourceName: Option[String],
                         default: Boolean = false) {
   def matchesPromMetric(promMetricEvent: PromMetricEvent): Boolean = {
     val fieldValue = fieldName match {
@@ -29,9 +31,7 @@ case class SumoEndpoint(name: Option[String],
 }
 
 case class JsonOptions(sourceCategoryJsonPath: Option[JsonPath],
-                       sourceCategoryFixed: Option[String],
                        sourceNameJsonPath: Option[JsonPath],
-                       sourceNameFixed: Option[String],
                        fieldJsonPaths: Option[Map[String, JsonPath]],
                        payloadWrapperKey: Option[String],
                        payloadJsonPath: Option[JsonPath])
@@ -45,6 +45,8 @@ object SumoEndpointSerializer extends CustomSerializer[SumoEndpoint](_ => ( {
       jsonOptions = (v \ "jsonOptions").extractOpt[JsonOptions],
       fieldName = (v \ "fieldName").extract[Option[String]],
       fieldPattern = (v \ "fieldPattern").extract[Option[Pattern]],
+      sourceCategory = (v \ "sourceCategory").extractOpt[String],
+      sourceName = (v \ "sourceName").extractOpt[String],
       default = (v \ "default").extractOrElse[Boolean](false)
     )
 }, {
@@ -63,9 +65,7 @@ object JsonOptionsSerializer extends CustomSerializer[JsonOptions](_ => ( {
     implicit val formats: Formats = DefaultFormats
     JsonOptions(
       sourceCategoryJsonPath = (v \ "sourceCategoryJsonPath").extractOpt[String].map(JsonPath.compile(_)),
-      sourceCategoryFixed = (v \ "sourceCategoryFixed").extractOpt[String],
       sourceNameJsonPath = (v \ "sourceNameJsonPath").extractOpt[String].map(JsonPath.compile(_)),
-      sourceNameFixed = (v \ "sourceNameFixed").extractOpt[String],
       fieldJsonPaths = (v \ "fieldJsonPaths").extractOpt[Map[String, String]].map { m => m map { case (k, v) => (k, JsonPath.compile(v)) } },
       payloadWrapperKey = (v \ "payloadWrapperKey").extractOpt[String],
       payloadJsonPath = (v \ "payloadJsonPath").extractOpt[String].map(JsonPath.compile(_))
