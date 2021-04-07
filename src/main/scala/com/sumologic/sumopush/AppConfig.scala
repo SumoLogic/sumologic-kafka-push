@@ -31,17 +31,7 @@ object AppConfig {
       retryDelayFactor = apiRetryConfig.getDouble("delayFactor").toFloat,
       retryDelayMax = apiRetryConfig.getInt("delayMax"),
       metricsServerPort = config.getInt("sumopush.metricsPort"),
-      encoding = config.getString("sumopush.encoding"),
-      containerExclusions = getConfigOverrides(config, "sumopush.container.exclusions"),
-      endpointNameOverrides = getConfigOverrides(config, "sumopush.logs.endpoint.names"),
-      sourceNameOverrides = getConfigOverrides(config, "sumopush.logs.source.names"),
-      sourceCategoryOverrides = getConfigOverrides(config, "sumopush.logs.source.categories"))
-  }
-
-  private def getConfigOverrides(config: Config, key: String): Map[String, String] = {
-    if (config.hasPath(key))
-      config.getString(key).split(',').map(_.split(":")).collect { case Array(k, v) => (k, v) }.toMap
-    else Map.empty
+      encoding = config.getString("sumopush.encoding"))
   }
 
   private def createEndpoints(endpoints: Config): List[SumoEndpoint] = {
@@ -70,10 +60,6 @@ final case class AppConfig(serdeClass: String,
                            retryDelayMax: Int = 120000,
                            metricsServerPort: Int = 8080,
                            encoding: String,
-                           containerExclusions: Map[String, String],
-                           endpointNameOverrides: Map[String, String],
-                           sourceNameOverrides: Map[String, String],
-                           sourceCategoryOverrides: Map[String, String],
                            endpoints: List[SumoEndpoint]) {
   def getMetricEndpoint(promMetricEvent: PromMetricEvent): Option[SumoEndpoint] = {
     endpoints.find(_.matchesPromMetric(promMetricEvent))
