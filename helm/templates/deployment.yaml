@@ -45,22 +45,6 @@ spec:
               value: {{ .Values.groupedSize | quote }}
             - name: GROUPED_DURATION
               value: {{ .Values.groupedDuration | quote }}
-            {{- if .Values.containerExclusions }}
-            - name: CONTAINER_EXCLUSIONS
-              value: {{ .Values.containerExclusions }}
-            {{- end }}
-            {{- if .Values.endpointNames }}
-            - name: ENDPOINT_NAMES
-              value: {{ .Values.endpointNames }}
-            {{- end }}
-            {{- if .Values.sourceNames }}
-            - name: SOURCE_NAMES
-              value: {{ .Values.sourceNames }}
-            {{- end }}
-            {{- if .Values.sourceCategories }}
-            - name: SOURCE_CATEGORIES
-              value: {{ .Values.sourceCategories }}
-            {{- end }}
           image: {{ .Values.image }}
           imagePullPolicy: Always
           name: push
@@ -73,10 +57,12 @@ spec:
               memory: 512Mi
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
+          {{- if .Values.endpointsSecret }}
           volumeMounts:
             - mountPath: /opt/docker/conf
               name: endpoints
               readOnly: true
+          {{- end }}
           ports:
             - name: prometheus
               containerPort: {{ .Values.metricsPort }}
@@ -95,10 +81,12 @@ spec:
           operator: "Equal"
           value: {{ .Values.workerGroupSelector }}
           effect: "NoSchedule"
-      {{- end}}
+      {{- end }}
+      {{- if .Values.endpointsSecret }}
       volumes:
         - name: endpoints
           secret:
             defaultMode: 420
             secretName: {{ .Values.endpointsSecret }}
+      {{- end }}
 

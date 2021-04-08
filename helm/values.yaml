@@ -1,5 +1,5 @@
 ---
-image: 246946804217.dkr.ecr.us-west-2.amazonaws.com/sumologic/sumologic-kafka-push:0.3.2
+image: public.ecr.aws/sumologic/sumologic-kafka-push:latest
 metricsPort: 8080
 logLevel: warn
 
@@ -8,11 +8,6 @@ dataType: logs
 groupedSize: 30000
 groupedDuration: '1s'
 endpointsSecret: endpoints-logs
-
-containerExclusions: null
-endpointNames: null
-sourceCategories: null
-sourceNames: null
 
 servicemonitor:
   labels: {}
