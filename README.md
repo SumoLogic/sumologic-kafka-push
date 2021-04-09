@@ -10,17 +10,7 @@ The latest sumologic-kafka-push docker image is hosted in our public repository 
 A docker compose file is available on request.
 ### Kubernetes
 We maintain a [helm chart](https://github.com/SumoLogic/sumologic-kafka-push/tree/main/helm) for running kafka-push in
-kubernetes. To use this chart, add the following to your chart:
-```
-dependencies:
-  - name: kafka-push
-    version: 0.2.0
-    repository: https://sumologic.github.io/sumologic-kafka-push
-```
-You will also need to add the helm repo:
-```
-helm repo add sumologic-kafka-push https://sumologic.github.io/sumologic-kafka-push
-```
+kubernetes.
 
 ## Supported message formats
 ### JSON Logs

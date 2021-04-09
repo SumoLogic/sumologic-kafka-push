@@ -3,6 +3,16 @@
 This chart is used to deploy kafka-push in kubernetes and should be used
 in conjunction with helm. 
 
+## Installation
+[Helm](https://helm.sh/) must be installed to use this chart. Please refer to Helm's [documentation](https://helm.sh/docs/)
+to get started.
+
+Once Helm is set up properly, add the repo as follows:
+```
+helm repo add sumologic-kafka-push https://sumologic.github.io/sumologic-kafka-push
+```
+You can then run `helm search repo sumologic-kafka-push` to see the charts.
+
 ## Configuration
 This chart supports common application configurations via the values settings. If additional
 configuration settings are needed this may be accomplished via mounting a secret specified by the
