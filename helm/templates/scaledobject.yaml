@@ -1,0 +1,22 @@
+{{- if eq .Values.autoscale.type "keda" }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  scaleTargetRef:
+    name: {{ .Release.Name }}
+    #envSourceContainerName: {container-name}  #Optional. Default: deployment.spec.template.spec.containers[0]
+  pollingInterval: {{ .Values.autoscale.keda.pollingInterval }} # seconds
+  cooldownPeriod: {{ .Values.autoscale.keda.cooldownPeriod }}
+  minReplicaCount: {{ .Values.autoscale.minReplicaCount }}
+  maxReplicaCount: {{ .Values.autoscale.maxReplicaCount }}
+  triggers:
+  - type: prometheus
+    metadata:
+      metricName: kafka_consumergroup_current_offset
+      query: (sum(delta(kafka_consumergroup_current_offset{consumergroup={{ .Values.kafka.consumerGroup | quote }},topic={{ .Values.kafka.topic | quote }}}[5m])/300) by (topic) / {{ .Values.autoscale.keda.ratePerSecond }}) * 100
+      serverAddress:  {{ .Values.autoscale.keda.prometheus }}
+      threshold: {{ .Values.autoscale.keda.lagThreshold | quote }}
+{{- end }}

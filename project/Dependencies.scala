@@ -15,7 +15,7 @@ object Version {
   val PrometheusClient = "0.8.1"
   val Re2j = "1.3"
   val Guava = "29.0-jre"
-  val Skuber = "2.4.0"
+  val Skuber = "2.6.0"
   val Scalacache = "0.28.0"
   val JsonPath = "2.5.0"
 }

@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Chart.Name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        sumologic.com/exclude: "true"
+      labels:
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers }}
+            - name: KAFKA_TOPIC
+              value: {{ .Values.kafka.topic }}
+            - name: KAFKA_CONSUMER_GROUP_ID
+              value: {{ .Values.kafka.consumerGroup }}
+            - name: SUMO_LOG_LEVEL
+              value: {{ .Values.logLevel }}
+            {{- if .Values.cluster }}
+            - name: CLUSTER_NAME
+              value: {{ .Values.cluster }}
+            {{- end }}
+            - name: DATA_TYPE
+              value: {{ .Values.dataType }}
+            - name: GROUPED_SIZE
+              value: {{ .Values.groupedSize | quote }}
+            - name: GROUPED_DURATION
+              value: {{ .Values.groupedDuration | quote }}
+            {{- if .Values.logs.uri }}
+            - name: SUMO_LOGS_URI
+              value: {{ .Values.logs.uri }}
+            {{- end }}
+            {{- if .Values.metrics.uri }}
+            - name: SUMO_METRICS_URI
+              value: {{ .Values.metrics.uri }}
+            {{- end }}
+          image: {{ .Values.image }}
+          imagePullPolicy: Always
+          name: push
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          {{- if .Values.endpointsSecret }}
+          volumeMounts:
+            - mountPath: /opt/docker/conf
+              name: endpoints
+              readOnly: true
+          {{- end }}
+          ports:
+            - name: prometheus
+              containerPort: {{ .Values.metricsPort }}
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccountName: {{ .Release.Name }}
+      terminationGracePeriodSeconds: 30
+      {{- if .Values.workerGroupSelector }}
+      nodeSelector:
+        sumologic.com/workerGroup: {{ .Values.workerGroupSelector }}
+      tolerations:
+        - key: "workerGroup"
+          operator: "Equal"
+          value: {{ .Values.workerGroupSelector }}
+          effect: "NoSchedule"
+      {{- end }}
+      {{- if .Values.endpointsSecret }}
+      volumes:
+        - name: endpoints
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.endpointsSecret }}
+      {{- end }}
+
