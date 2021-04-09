@@ -9,13 +9,25 @@ The latest sumologic-kafka-push docker image is hosted in our public repository 
 ### Docker
 A docker compose file is available on request.
 ### Kubernetes
-A Helm chart for running in kubernetes will be forthcoming.
+We maintain a [helm chart](https://github.com/SumoLogic/sumologic-kafka-push/tree/main/helm) for running kafka-push in
+kubernetes. To use this chart, add the following to your chart:
+```
+dependencies:
+  - name: kafka-push
+    version: 0.2.0
+    repository: https://sumologic.github.io/sumologic-kafka-push
+```
+You will also need to add the helm repo:
+```
+helm repo add sumologic-kafka-push https://sumologic.github.io/sumologic-kafka-push
+```
 
 ## Supported message formats
 ### JSON Logs
 Arbitrary JSON log format is supported using `com.sumologic.sumopush.serde.JsonLogEventSerde`. Log payload, additional
 metadata fields, and source name and category are all configurable using jsonpath expressions to reference fields in the
 message. See `Endpoint configuration` below.
+
 ### Kubernetes Logs
 Kubernetes logs are JSON format but follow a consistent field naming convention. An example:
 
@@ -65,10 +77,6 @@ Configuration is generally made using the following environment variables:
 | GROUPED_SIZE              | Message batch size for api requests     | 1000 |
 | GROUPED_DURATION          | Maximum message batch duration          | 1s   |
 | SEND_BUFFER               | Send buffer size                        | 10000 |
-| CONTAINER_EXCLUSIONS      |                                         | None |
-| ENDPOINT_NAMES            |                                         | None |
-| SOURCE_NAMES              |                                         | None |
-| SOURCE_CATEGORIES         |                                         | None |
 | KAFKA_CONSUMER_COMMIT_TIMEOUT | Kafka consumer commit timeout       | 30s |
 | MAX_HTTP_CONNECTIONS      | Maximum size for http connection pool   | 50 |
 | MAX_HTTP_OPEN_REQUESTS    | Maximum http connection pool open requests | 32 |
@@ -95,9 +103,9 @@ endpoints: {
   logs: {
     uri: <ingestion uri>,
     default: true,
+    sourceName: "weblogs",
     jsonOptions: {
       sourceCategoryJsonPath: "$.sourceSystem",
-      sourceNameFixed: "weblogs",
       payloadJsonPath = "$.logMessage"
     }
   }
@@ -114,18 +122,31 @@ Supported configuration for endpoints:
 | fieldName  | Log field name to match against.      |
 | fieldPattern | Pattern to match against when selecting this endpoint. In the case of metrics, this matches against the metric name. For logs, this matches against the value of `fieldName`  |
 | default    | Use this endpoint as the default in case no match is made |
+| sourceCategory | Default source category | 
+| sourceName | Default source name | 
 
 Supported configuration for endpoint jsonOptions:
 
 | Name      | Description       |
 | ----------| ------------------|
 | sourceCategoryJsonPath | Jsonpath to source category in message |
-| sourceCategoryFixed    | Fixed source category to use for all messages |
 | sourceNameJsonPath     | Jsonpath to source name in message |
-| sourceNameFixed    | Fixed source name to use for all messages |
 | fieldJsonPaths     | Map of field name to jsonpath for metadata fields |
 | payloadWrapperKey  | Message key which contains the actual message  |
 | payloadJsonPath    | Jsonpath to the log payload  |
+
+## Kubernetes configuration
+Overrides are available in kubernetes using pod annotations. These settings take precedence over default or endpoint settings.
+Any override settings can be applied on a per-container basis by appending `.<container name>` to the annotation.
+
+| Annotation | Description     |
+|------------|-----------------|
+| sumologic.com/exclude | Exclude from data collection |
+| sumologic.com/sourceCategory | Source category override |
+| sumologic.com/ep | Endpoint name override |
+| sumologic.com/format | Configure text/json format for sending data |
+| sumologic.com/filter | Endpoint filter to send duplicate logs matching a regex for a specific container to another endpoint.  The syntax for using this feature is `sumologic.com/filter.<container name>.<endpoint name>` with the regex pattern to match in the annotation value. Endpoint name must match an endpoint in the configuration. |
+| sumologic.com/sourceName | Source name override |
 
 ## For developers
 ### Publish docker image
