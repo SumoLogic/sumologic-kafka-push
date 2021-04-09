@@ -3,8 +3,8 @@ import sbt._
 object Version {
   val TypesafeConfig = "1.4.0"
   val Scala = "2.13.1"
-  val Akka = "2.6.4"
-  val AkkaHttp = "10.1.11"
+  val Akka = "2.6.13"
+  val AkkaHttp = "10.2.4"
   val ScalaTest = "3.1.1"
   val Logback = "1.2.3"
   val Json4s = "3.6.7"
