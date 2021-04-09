@@ -19,16 +19,16 @@ class ConfigTest extends AnyFlatSpec with Matchers {
 
   "config" should "deserialize to AppConfig" in {
     assert(appConfig.cluster == "default")
-    val first = appConfig.sumoEndpoints("metricsFirst")
-    val default = appConfig.endpoints.last
+    val first = appConfig.sumoEndpoints("metrics")
+    val default = appConfig.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.get._2
     assert(SumoDataType.logs == appConfig.dataType)
-    assert(SumoDataType.logs.contentType == ContentTypes.NoContentType)
-    assert(first.name.get == "metricsFirst")
-    assert(first.uri == Uri("http://sumo.com/ingest/go"))
+    assert(SumoDataType.logs.contentType == ContentTypes.`text/plain(UTF-8)`)
+    assert(first.name.get == "metrics")
+    assert(first.uri == Uri("http://sumologic.com/ingest/metrics"))
     assert(first.fieldPattern.get.toString == "container.+")
     assert(first.fieldName.contains("name"))
-    assert(default.name.get == "metricsSecond")
-    assert(default.uri == Uri("http://sumo.com/ingest2/go"))
+    assert(default.name.get == "logs")
+    assert(default.uri == Uri("http://sumologic.com/ingest/logs"))
     assert(default.fieldName.isEmpty)
   }
 
@@ -63,7 +63,7 @@ class ConfigTest extends AnyFlatSpec with Matchers {
       """.stripMargin
     val pme = PromMetricEventSerializer.fromJson(promMetricJson)
     val se = appConfig.getMetricEndpoint(pme)
-    assert(se.map(_.name.contains("metricsFirst")).isDefined)
+    assert(se.map(_.name.contains("metrics")).isDefined)
 
     val promMetricJson2 =
       """

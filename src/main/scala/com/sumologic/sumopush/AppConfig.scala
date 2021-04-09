@@ -26,22 +26,13 @@ object AppConfig {
       dataType = dataType,
       groupedSize = config.getInt("sumopush.grouped.size"),
       groupedDuration = FiniteDuration(config.getDuration("sumopush.grouped.duration").toNanos, TimeUnit.NANOSECONDS),
-      sendBuffer = config.getInt("sumopush.send.buffer"),
+      streamsMax = config.getInt("sumopush.streams.max"),
       initRetryDelay = apiRetryConfig.getInt("initDelay"),
       retryDelayFactor = apiRetryConfig.getDouble("delayFactor").toFloat,
       retryDelayMax = apiRetryConfig.getInt("delayMax"),
+      retryMaxAttempts = apiRetryConfig.getInt("maxAttempts"),
       metricsServerPort = config.getInt("sumopush.metricsPort"),
-      encoding = config.getString("sumopush.encoding"),
-      containerExclusions = getConfigOverrides(config, "sumopush.container.exclusions"),
-      endpointNameOverrides = getConfigOverrides(config, "sumopush.logs.endpoint.names"),
-      sourceNameOverrides = getConfigOverrides(config, "sumopush.logs.source.names"),
-      sourceCategoryOverrides = getConfigOverrides(config, "sumopush.logs.source.categories"))
-  }
-
-  private def getConfigOverrides(config: Config, key: String): Map[String, String] = {
-    if (config.hasPath(key))
-      config.getString(key).split(',').map(_.split(":")).collect { case Array(k, v) => (k, v) }.toMap
-    else Map.empty
+      encoding = config.getString("sumopush.encoding"))
   }
 
   private def createEndpoints(endpoints: Config): List[SumoEndpoint] = {
@@ -64,16 +55,13 @@ final case class AppConfig(serdeClass: String,
                            dataType: SumoDataType.Value,
                            groupedSize: Int,
                            groupedDuration: FiniteDuration,
-                           sendBuffer: Int,
+                           streamsMax: Int,
                            initRetryDelay: Int = 2,
                            retryDelayFactor: Float = 1.5f,
                            retryDelayMax: Int = 120000,
+                           retryMaxAttempts: Int = 10,
                            metricsServerPort: Int = 8080,
                            encoding: String,
-                           containerExclusions: Map[String, String],
-                           endpointNameOverrides: Map[String, String],
-                           sourceNameOverrides: Map[String, String],
-                           sourceCategoryOverrides: Map[String, String],
                            endpoints: List[SumoEndpoint]) {
   def getMetricEndpoint(promMetricEvent: PromMetricEvent): Option[SumoEndpoint] = {
     endpoints.find(_.matchesPromMetric(promMetricEvent))

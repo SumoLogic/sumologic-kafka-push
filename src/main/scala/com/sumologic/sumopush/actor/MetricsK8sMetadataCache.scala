@@ -4,7 +4,7 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import com.google.common.cache.{Cache, CacheBuilder}
-import com.sumologic.sumopush.actor.MetricConsumer.ParsedMetricMessage
+import com.sumologic.sumopush.actor.MetricsFlow.ParsedMetricMessage
 import io.prometheus.client.Counter
 import org.slf4j.{Logger, LoggerFactory}
 import scalacache._
@@ -36,7 +36,7 @@ object MetricsK8sMetadataCache {
   sealed trait Message
   case class K8sMetaRequest(metricMessage: ParsedMetricMessage,
                             replyTo: ActorRef[ParsedMetricMessage]) extends Message
-  case class K8sMetaResponse(podLabels: Map[String, String]) extends Message
+  case class K8sMetaResponse(podLabels: Map[String, String], podAnnotations: Map[String, String]) extends Message
 
   def apply(): Behavior[Message] = Behaviors.setup { ctx =>
     implicit val system: akka.actor.ActorSystem = ctx.system.toClassic
@@ -76,7 +76,7 @@ object MetricsK8sMetadataCache {
       cache_misses.labels(getClass.getSimpleName).inc()
       val k8s: KubernetesClient = k8sInit
       val podMeta = k8s.getInNamespace[Pod](pod, namespace).map {
-        pod => K8sMetaResponse(pod.metadata.labels)
+        pod => K8sMetaResponse(pod.metadata.labels, pod.metadata.annotations)
       }
       podMeta.onComplete {
         case Success(_) =>
