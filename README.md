@@ -54,7 +54,7 @@ Configuration is generally made using the following environment variables:
 | ----------- | ----------- | ------- |
 | KAFKA_SERDE_CLASS_NAME    | Serde class used to deserialize json messages (`com.sumologic.sumopush.serde.KubernetesLogEventSerde` or `com.sumologic.sumopush.serde.JsonLogEventSerde`)    | com.sumologic.sumopush.serde.KubernetesLogEventSerde        |
 | KAFKA_BOOTSTRAP_SERVERS   | Kafka bootstrap connect string        | localhost:9092 |
-| KAFKA_TOPIC               | Kafka topic(s) to be consumed         | logs |
+| KAFKA_TOPIC               | Kafka topic(s) to be consumed. This may be a regex (java [Pattern](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html)) to match multiple topics. | logs |
 | KAFKA_CONSUMER_GROUP_ID   | Kafka consumer group                  | sumopush |
 | KAFKA_AUTO_OFFSET_RESET   | Kafka auto offset reset setting       | earliest |
 | CLUSTER_NAME              | Cluster name metadata field            | default |
