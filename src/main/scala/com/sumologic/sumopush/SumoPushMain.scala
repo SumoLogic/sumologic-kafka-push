@@ -41,7 +41,7 @@ object SumoPushMain {
           context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => LogsFlow(config, context)), "log-consumer")
         case SumoDataType.metrics =>
           val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, PromMetricEventSerde))
-          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topics(config.topic)), context => MetricsFlow(config, context, k8sMetadataCache)), "metric-consumer")
+          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => MetricsFlow(config, context, k8sMetadataCache)), "metric-consumer")
       }
 
       CoordinatedShutdown(context.system).addJvmShutdownHook {
