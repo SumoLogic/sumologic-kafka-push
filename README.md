@@ -5,7 +5,7 @@ A containerized application for scalable, high-performance log and metric ingest
 from Kafka. May either be run in Kubernetes or Docker environments.
 
 ## Installation
-The latest sumologic-kafka-push docker image is hosted in our public repository at `public.ecr.aws/sumologic/sumologic-kafka-push:latest`
+The latest sumologic-kafka-push docker image is hosted in our public repository at `public.ecr.aws/sumologic/sumologic-kafka-push:0.3.5`
 ### Docker
 A docker compose file is available on request.
 ### Kubernetes
@@ -96,7 +96,7 @@ endpoints: {
     sourceName: "weblogs",
     jsonOptions: {
       sourceCategoryJsonPath: "$.sourceSystem",
-      payloadJsonPath = "$.logMessage"
+      payloadJsonPath: "$.logMessage"
     }
   }
 }
