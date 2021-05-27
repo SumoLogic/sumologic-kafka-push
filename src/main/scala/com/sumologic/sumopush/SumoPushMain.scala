@@ -19,7 +19,7 @@ import com.sumologic.sumopush.serde.{LogEventSerde, PromMetricEventSerde}
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.LoggerFactory
 
 import java.io.File
 import java.util
@@ -29,31 +29,36 @@ import scala.jdk.CollectionConverters._
 import scala.reflect.runtime.universe
 
 object SumoPushMain {
+
+  private val log = LoggerFactory.getLogger(getClass)
+
   def apply(config: AppConfig): Behavior[NotUsed] = Behaviors.supervise(
     Behaviors.setup[NotUsed] { context =>
       implicit val executionContext: ExecutionContext = context.executionContext
 
-      val k8sMetadataCache = context.spawn(MetricsK8sMetadataCache(), "k8s-meta-cache")
       val metricsServer = context.spawn(MetricsServer(config), "metrics-server")
       val consumer = config.dataType match {
         case SumoDataType.logs =>
-          val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, loadSerde(context.log, config.serdeClass)))
-          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => LogsFlow(config, context)), "log-consumer")
+          val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, loadSerde(config.serdeClass)))
+          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => LogsFlow(context, config)), "log-consumer")
         case SumoDataType.metrics =>
+          val k8sMetadataCache = context.spawn(MetricsK8sMetadataCache(), "k8s-meta-cache")
           val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, PromMetricEventSerde))
           context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => MetricsFlow(config, context, k8sMetadataCache)), "metric-consumer")
       }
+      context.watch(consumer)
 
       CoordinatedShutdown(context.system).addJvmShutdownHook {
         consumer ! ConsumerShutdown
         metricsServer ! Stop
-        Await.result(context.system.whenTerminated.map(_ => context.log.info("shutdown complete")), 1.minute)
+        Await.result(context.system.whenTerminated.map(_ => log.info("shutdown complete")), 1.minute)
       }
+
       Behaviors.same
     }
-  ).onFailure[DeathPactException](akka.actor.typed.SupervisorStrategy.stop)
+  ).onFailure(akka.actor.typed.SupervisorStrategy.stop)
 
-  def loadSerde(log: Logger, className: String): LogEventSerde[Any] = {
+  def loadSerde(className: String): LogEventSerde[Any] = {
     try {
       val runtimeMirror = universe.runtimeMirror(getClass.getClassLoader)
       val module = runtimeMirror.staticModule(className)

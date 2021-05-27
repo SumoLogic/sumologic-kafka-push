@@ -2,7 +2,7 @@ import sbt._
 
 object Version {
   val TypesafeConfig = "1.4.0"
-  val Scala = "2.13.1"
+  val Scala = "2.13.5"
   val Akka = "2.6.13"
   val AkkaHttp = "10.2.4"
   val ScalaTest = "3.1.1"
@@ -10,7 +10,7 @@ object Version {
   val Json4s = "3.6.7"
   val AkkaHttpJson4s = "1.31.0"
   val AkkaKafka = "2.0.3"
-  val ApacheKafkaClient = "2.5.0"
+  val ApacheKafkaClient = "2.7.0"
   val PrometheusAkkaHttp = "0.5.0"
   val PrometheusClient = "0.8.1"
   val Re2j = "1.3"
@@ -31,6 +31,7 @@ object Dependencies {
   val AkkaHttpJson4s = "de.heikoseeberger" %% "akka-http-json4s" % Version.AkkaHttpJson4s
   val AkkaKafka = "com.typesafe.akka" %% "akka-stream-kafka" % Version.AkkaKafka
   val ApacheKafkaClient = "org.apache.kafka" % "kafka-clients" % Version.ApacheKafkaClient
+//  val ApacheKafkaConnect = "org.apache.kafka" % "connect-api" % Version.ApacheKafkaClient
   val PrometheusAkkaHttp = "com.lonelyplanet" %% "prometheus-akka-http" % Version.PrometheusAkkaHttp
   val PrometheusClient = "io.prometheus" % "simpleclient_hotspot" % Version.PrometheusClient
   val Re2j = "com.google.re2j" % "re2j" % Version.Re2j

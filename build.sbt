@@ -46,6 +46,7 @@ lazy val sumologicKafkaPush =
         AkkaHttpJson4s,
         AkkaKafka,
         ApacheKafkaClient,
+//        ApacheKafkaConnect,
         PrometheusAkkaHttp,
         PrometheusClient,
         Re2j,
@@ -63,7 +64,7 @@ lazy val sumologicKafkaPush =
       daemonUserUid in Docker := Some("1000"),
       daemonGroupGid in Docker := Some("1000"),
       dockerExposedPorts in Docker ++= Seq(8080),
-      dockerRepository := Some("sumologic"),
+      dockerRepository := Some("public.ecr.aws/sumologic"),
       dockerUsername := Option(System.getenv("DOCKER_USERNAME")).orElse(None),
       dockerBaseImage := "public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11",
     )

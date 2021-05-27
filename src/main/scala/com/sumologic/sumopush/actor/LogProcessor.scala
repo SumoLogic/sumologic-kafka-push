@@ -12,8 +12,8 @@ import com.sumologic.sumopush.model.SumoDataFormat.Format
 import com.sumologic.sumopush.model._
 import io.prometheus.client.Counter
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.json4s.JsonAST.JObject
-import org.json4s.{DefaultFormats, Formats}
+import org.json4s.JsonAST.{JArray, JObject}
+import org.json4s.{DefaultFormats, Formats, JValue}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
@@ -89,56 +89,71 @@ object LogProcessor extends MessageProcessor {
   }
 
   def createSumoRequestsFromLogEvent(config: AppConfig, topic: String, logEvent: JsonLogEvent): Seq[SumoRequest] = {
-    implicit val formats: Formats = DefaultFormats
     val endpoint = config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.map(_._2).get
     val jsonOptions = endpoint.jsonOptions.map(opts => (opts.fieldJsonPaths, opts.payloadJsonPath))
       .getOrElse((None, None))
 
     val sourceCategory = findSourceNameOrCategory(endpoint.sourceCategory,
-                           endpoint.jsonOptions.flatMap(opts => opts.sourceCategoryJsonPath), topic, logEvent)
+      endpoint.jsonOptions.flatMap(opts => opts.sourceCategoryJsonPath), topic, logEvent)
     val sourceName = findSourceNameOrCategory(endpoint.sourceName,
-                       endpoint.jsonOptions.flatMap(opts => opts.sourceNameJsonPath), topic, logEvent)
+      endpoint.jsonOptions.flatMap(opts => opts.sourceNameJsonPath), topic, logEvent)
 
     val wrapperKey = endpoint.jsonOptions.flatMap(_.payloadWrapperKey)
 
+    (logEvent.message match {
+      case ja: JArray =>
+        ja.arr.map(jv => findPayloadAndFields(jv, jsonOptions, wrapperKey))
+      case jv: JValue =>
+        List(findPayloadAndFields(jv, jsonOptions, wrapperKey))
+    }).map {
+      case (payload, fields) =>
+        SumoRequest(
+          key = DefaultLogKey(sourceCategory),
+          dataType = SumoDataType.logs,
+          format = SumoDataFormat.json,
+          endpointName = endpoint.name.getOrElse("default"),
+          sourceName = sourceName,
+          sourceCategory = sourceCategory,
+          sourceHost = config.host,
+          fields = Seq.empty,
+          endpoint = endpoint.uri,
+          logs = Seq(RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ payload.toSeq ++ fields.toSeq).toMap)))
+    }
+  }
+
+  def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath]), key: Option[String]): (Map[String, Any], Map[String, Any]) = {
+    implicit val formats: Formats = DefaultFormats
     val payload = (jsonOptions match {
-      case (_, Some(jp)) => jp.read(logEvent.message).asInstanceOf[Any] match {
+      case (_, Some(jp)) => jp.read(json).asInstanceOf[Any] match {
         case s: String => s
         case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
+        case ja: JArray => ja.arr.head match {
+          case o: JObject => ja.extract[List[Map[String, Any]]]
+          case _ => ja.extract[List[Any]]
+        }
         case jo: JObject => jo.extract[Map[String, Any]]
-        case _ => logEvent.message.extract[Map[String, Any]]
+        case _ => json.extract[Map[String, Any]]
       }
-      case _ => logEvent.message.extract[Map[String, Any]]
+      case _ => json.extract[Map[String, Any]]
     }) match {
-      case s: String => Map(wrapperKey.getOrElse("log") -> s)
-      case m: Map[_, _] => wrapperKey match {
+      case s: String => Map(key.getOrElse("log") -> s)
+      case l: List[_] => Map(key.getOrElse("log") -> l)
+      case m: Map[_, _] => key match {
         case Some(wk) => Map(wk -> m)
         case None => m.asInstanceOf[Map[String, Any]]
       }
     }
 
     val fields: Map[String, String] = jsonOptions match {
-      case (Some(m), _) => m.map { case (key, path) => (key, path.read(logEvent.message).asInstanceOf[Any]) }
+      case (Some(m), _) => m.map { case (key, path) => (key, path.read(json).asInstanceOf[Any]) }
         .collect { case (k: String, v: String) => (k, v) }
       case _ => Map.empty
     }
-
-    Seq(SumoRequest(
-      key = DefaultLogKey(sourceCategory),
-      dataType = SumoDataType.logs,
-      format = SumoDataFormat.json,
-      endpointName = endpoint.name.getOrElse("default"),
-      sourceName = sourceName,
-      sourceCategory = sourceCategory,
-      sourceHost = config.host,
-      fields = Seq.empty,
-      endpoint = endpoint.uri,
-      logs = Seq(RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ payload.toSeq ++ fields.toSeq).toMap))
-    ))
+    (payload, fields)
   }
 
   def findSourceNameOrCategory(fixed: Option[String], jsonPath: Option[JsonPath], topic: String, logEvent: JsonLogEvent): String = {
-    val jsonOpts =  (fixed, jsonPath)
+    val jsonOpts = (fixed, jsonPath)
     jsonOpts match {
       case (_, Some(jp)) => jp.read(logEvent.message).asInstanceOf[String] match {
         case null | "" => topic
@@ -198,7 +213,7 @@ object LogProcessor extends MessageProcessor {
 
   private def findEndpointFormat(logEvent: KubernetesLogEvent): Format = {
     findPodMetadataValue(FormatAnnotationPrefix, SumoDataFormat.json, logEvent.metadata.annotations, logEvent.metadata.container,
-        Some(format => SumoDataFormat.withNameOpt(format).isDefined), Some(v => SumoDataFormat.withNameOpt(v).get))
+      Some(format => SumoDataFormat.withNameOpt(format).isDefined), Some(v => SumoDataFormat.withNameOpt(v).get))
   }
 
   private def findContainerExclusion(logEvent: KubernetesLogEvent): Boolean = {
