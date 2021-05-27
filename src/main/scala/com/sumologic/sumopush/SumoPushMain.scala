@@ -44,7 +44,7 @@ object SumoPushMain {
         case SumoDataType.metrics =>
           val k8sMetadataCache = context.spawn(MetricsK8sMetadataCache(), "k8s-meta-cache")
           val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, PromMetricEventSerde))
-          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => MetricsFlow(config, context, k8sMetadataCache)), "metric-consumer")
+          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => MetricsFlow(context, config, k8sMetadataCache)), "metric-consumer")
       }
       context.watch(consumer)
 
