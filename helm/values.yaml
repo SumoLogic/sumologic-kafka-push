@@ -1,0 +1,45 @@
+---
+image: public.ecr.aws/sumologic/sumologic-kafka-push:latest
+metricsPort: 8080
+logLevel: warn
+
+replicas: 1
+dataType: logs
+groupedSize: 30000
+groupedDuration: '1s'
+endpointsSecret: null
+resources:
+  limits:
+    cpu: '2'
+    memory: 2Gi
+  requests:
+    cpu: '1'
+    memory: 512Mi
+
+servicemonitor:
+  labels: {}
+
+cluster: null
+
+logs:
+  uri: null
+metrics:
+  uri: null
+
+kafka:
+  bootstrapServers: localhost:9092
+  topic: kafka-push-logs
+  consumerGroup: kafka-push-logs
+
+autoscale:
+  type: hpa
+  minReplicaCount: 1
+  maxReplicaCount: 8
+  keda:
+    ratePerSecond: 9000
+    cooldownPeriod: 1200
+    pollingInterval: 30
+    lagThreshold: '90'
+    prometheus: http://localhost:9090
+  hpa:
+    cpuThreshold: 90
