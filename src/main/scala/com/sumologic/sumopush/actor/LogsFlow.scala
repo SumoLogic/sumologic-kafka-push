@@ -16,15 +16,15 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
 object LogsFlow {
-  def apply(config: AppConfig, context: ActorContext[ConsumerCommand]): Graph[FlowShape[CommittableMessage[String, Try[LogEvent[Any]]], (Option[SumoRequest], Option[CommittableOffset])], NotUsed] =
+  def apply(context: ActorContext[ConsumerCommand], config: AppConfig): Graph[FlowShape[CommittableMessage[String, Try[LogEvent[Any]]], (Option[SumoRequest], Option[CommittableOffset])], NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder => {
       implicit val timeout: Timeout = 5.minutes
 
-      val processor = context.spawn(LogProcessor(config), "log-processor")
-      context.watch(processor)
+      val ref = context.spawn(LogProcessor(config), "log-processor")
+      context.watch(ref)
 
       builder.add(Flow[CommittableMessage[String, Try[LogEvent[Any]]]]
-        .via(ActorFlow.ask(10)(processor) {
+        .via(ActorFlow.ask(10)(ref) {
           (message: CommittableMessage[String, Try[LogEvent[Any]]], replyTo: ActorRef[(Option[Seq[SumoRequest]], CommittableOffset)]) =>
             ConsumerLogMessage(message.record, message.committableOffset, replyTo)
         })

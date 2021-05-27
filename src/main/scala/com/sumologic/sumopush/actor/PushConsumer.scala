@@ -12,6 +12,7 @@ import akka.{Done, NotUsed}
 import com.sumologic.sumopush.AppConfig
 import com.sumologic.sumopush.actor.ConsumerCommand.ConsumerShutdown
 import com.sumologic.sumopush.model.SumoRequest
+import org.slf4j.LoggerFactory
 
 import java.util.concurrent.Executors
 import scala.concurrent.duration.DurationInt
@@ -19,6 +20,8 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 import scala.util.{Failure, Success}
 
 object PushConsumer {
+
+  private val log = LoggerFactory.getLogger(getClass)
 
   def apply[K, V](config: AppConfig, source: Source[CommittableMessage[K, V], Control],
                   createGraph: ActorContext[ConsumerCommand] => Graph[FlowShape[CommittableMessage[K, V], (Option[SumoRequest], Option[CommittableOffset])], NotUsed]): Behavior[ConsumerCommand] = Behaviors.setup[ConsumerCommand] { context => {
@@ -51,8 +54,8 @@ object PushConsumer {
       context.log.info("draining kafka consumer...")
       val drain = control.drainAndShutdown()
       drain.onComplete {
-        case Success(_) => context.log.info("kafka consumer cleanly drained")
-        case Failure(_) => context.log.info("stream failed with decider")
+        case Success(_) => log.info("kafka consumer cleanly drained")
+        case Failure(_) => log.info("stream failed with decider")
       }
       Await.result(drain, 30.seconds)
     }
@@ -60,16 +63,12 @@ object PushConsumer {
     Behaviors.receiveMessage[ConsumerCommand] {
       case ConsumerShutdown =>
         shutdown()
-        Behaviors.stopped { () =>
-          context.log.info("kafka consumer stopped")
-        }
+        Behaviors.stopped
     }.receiveSignal {
       case (context, Terminated(ref)) =>
         context.log.info("Actor stopped: {}", ref.path.name)
         shutdown()
-        Behaviors.stopped {
-          () => context.log.info("kafka consumer stopped")
-        }
+        Behaviors.stopped
     }
   }
   }
