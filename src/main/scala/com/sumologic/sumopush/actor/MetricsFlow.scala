@@ -28,12 +28,15 @@ object MetricsFlow {
 
   case class ParsedMetricMessage(pme: Option[PromMetricEvent], offset: CommittableOffset)
 
-  def apply(context: ActorContext[ConsumerCommand], config: AppConfig, k8sMetaCache: ActorRef[MetricsK8sMetadataCache.Message]): Graph[FlowShape[CommittableMessage[String, Try[PromMetricEvent]], (Option[SumoRequest], Option[CommittableOffset])], NotUsed] =
+  def apply(context: ActorContext[ConsumerCommand], config: AppConfig): Graph[FlowShape[CommittableMessage[String, Try[PromMetricEvent]], (Option[SumoRequest], Option[CommittableOffset])], NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder => {
       implicit val timeout: Timeout = 5.minutes
 
-      val ref = context.spawn(MetricProcessor(config), "metric-processor")
-      context.watch(ref)
+      val k8sMetaCache = context.spawn(MetricsK8sMetadataCache(), "k8s-meta-cache")
+      context.watch(k8sMetaCache)
+
+      val processor = context.spawn(MetricProcessor(config), "metric-processor")
+      context.watch(processor)
 
       builder.add(Flow[CommittableMessage[String, Try[PromMetricEvent]]]
         .mapConcat { msg =>
@@ -50,7 +53,7 @@ object MetricsFlow {
           (message: ParsedMetricMessage, replyTo: ActorRef[ParsedMetricMessage]) =>
             K8sMetaRequest(message, replyTo)
         })
-        .via(ActorFlow.ask(10)(ref) {
+        .via(ActorFlow.ask(10)(processor) {
           (message: ParsedMetricMessage, replyTo: ActorRef[(Option[SumoRequest], Option[CommittableOffset])]) =>
             ConsumerMetricMessage(message.pme, message.offset, replyTo)
         }))
