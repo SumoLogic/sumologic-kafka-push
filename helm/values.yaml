@@ -16,6 +16,12 @@ resources:
     cpu: '1'
     memory: 512Mi
 
+extraVolumes: []
+
+extraVolumeMounts: []
+
+extraEnvVars: []
+
 servicemonitor:
   enabled: true
   labels: {}
