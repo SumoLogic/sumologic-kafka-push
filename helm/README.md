@@ -30,6 +30,26 @@ and is configured using the lag threshold in number of messages. Dependencies ne
 feature include: [keda](https://keda.sh/), [prometheus](https://github.com/prometheus-operator/prometheus-operator),
 and [kafka lag exporter](https://github.com/lightbend/kafka-lag-exporter).
 
+## Extra Volumes
+Extra volumes may be specified using `extraVolumes/extraVolumeMounts`. May be used to mount binary truststore/certstore
+ files stored in a secret.
+
+####Example
+To create secret: `kubectl create secret generic ssl-truststore --from-file=truststore.jks`
+Values snippet:
+```
+extraVolumes:
+  - name: truststore
+    secret:
+      defaultMode: 420
+      secretName: ssl-truststore
+extraVolumeMounts:
+  - mountPath: /opt/ssl
+    name: truststore
+    readOnly: true 
+```
+Then reference the file `/opt/ssl/truststore.jks` file in your endpoints secret kafka configuration.
+
 ## Values
 The `values.yaml` contains variables used to configure a deployment of this chart.
 
