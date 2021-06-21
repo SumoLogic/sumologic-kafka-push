@@ -37,6 +37,7 @@ kafka:
   bootstrapServers: localhost:9092
   topic: kafka-push-logs
   consumerGroup: kafka-push-logs
+  serdeClass: null
 
 autoscale:
   type: hpa

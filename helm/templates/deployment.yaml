@@ -55,6 +55,10 @@ spec:
             - name: SUMO_METRICS_URI
               value: {{ .Values.metrics.uri }}
             {{- end }}
+            {{- if .Values.kafka.serdeClass }}
+            - name: KAFKA_SERDE_CLASS_NAME
+              value: {{ .Values.kafka.serdeClass }}
+            {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
             {{- end }}
