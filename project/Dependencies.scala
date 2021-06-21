@@ -1,7 +1,7 @@
 import sbt._
 
 object Version {
-  val TypesafeConfig = "1.4.0"
+  val TypesafeConfig = "1.4.1"
   val Scala = "2.13.5"
   val Akka = "2.6.13"
   val AkkaHttp = "10.2.4"
@@ -21,7 +21,7 @@ object Version {
 }
 
 object Dependencies {
-  val LightbendConfig = "com.typesafe" % "config" % Version.TypesafeConfig
+  val TypesafeConfig = "com.typesafe" % "config" % Version.TypesafeConfig
   val AkkaTyped = "com.typesafe.akka" %% "akka-actor-typed" % Version.Akka
   val AkkaStreamTyped = "com.typesafe.akka" %% "akka-stream-typed" % Version.Akka
   val AkkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % Version.Akka

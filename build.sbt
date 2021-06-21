@@ -33,7 +33,7 @@ lazy val sumologicKafkaPush =
       scalacOptions in(Test, console) := (scalacOptions in(Compile, console)).value,
 
       libraryDependencies ++= Vector(
-        LightbendConfig,
+        TypesafeConfig,
         AkkaTyped,
         AkkaSlf4j,
         AkkaStreamTyped,
