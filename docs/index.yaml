@@ -3,29 +3,29 @@ entries:
   kafka-push:
   - apiVersion: v1
     appVersion: 0.2.1
-    created: "2021-06-22T13:18:48.122358-06:00"
+    created: "2021-06-22T13:23:34.732156-06:00"
     description: A Helm chart to push logs and metrics from kafka to Sumo Logic endpoints
     digest: cda695540cbeebc3bc76cbc443751bccf6fb60dbe400749127bb00e5ba8e2569
     name: kafka-push
     urls:
-    - kafka-push-0.2.1.tgz
+    - https://sumologic.github.io/sumologic-kafka-push/kafka-push-0.2.1.tgz
     version: 0.2.1
   - apiVersion: v1
     appVersion: 0.2.0
-    created: "2021-06-22T13:18:48.121892-06:00"
+    created: "2021-06-22T13:23:34.731671-06:00"
     description: A Helm chart to push logs and metrics from kafka to Sumo Logic endpoints
     digest: 25dc36e53d8444ea09553581e8c07350ce5795baca3bab740a1f78263fc6087c
     name: kafka-push
     urls:
-    - kafka-push-0.2.0.tgz
+    - https://sumologic.github.io/sumologic-kafka-push/kafka-push-0.2.0.tgz
     version: 0.2.0
   - apiVersion: v1
     appVersion: 0.1.0
-    created: "2021-06-22T13:18:48.121347-06:00"
+    created: "2021-06-22T13:23:34.731189-06:00"
     description: A Helm chart to push logs and metrics from kafka to Sumo Logic endpoints
     digest: 67c968c217fff7af98b5ed2ce4c73abc0580efb6821a304bd2e5953ae02b25af
     name: kafka-push
     urls:
-    - kafka-push-0.1.0.tgz
+    - https://sumologic.github.io/sumologic-kafka-push/kafka-push-0.1.0.tgz
     version: 0.1.0
-generated: "2021-06-22T13:18:48.117844-06:00"
+generated: "2021-06-22T13:23:34.730462-06:00"
