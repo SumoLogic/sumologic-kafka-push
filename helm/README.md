@@ -89,3 +89,14 @@ The `values.yaml` contains variables used to configure a deployment of this char
 | servicemonitor.enabled | Deploy a servicemonitor for scraping metrics | true |
 | servicemonitor.labels | Labels to append to servicemonitor for scraping metrics | {} |
 
+## For Developers
+#### Publish Chart
+To publish a new chart, first ensure the main branch has the latest changes and Chart.yaml has been updated with the new
+version/appVersion.
+```
+git checkout gh-pages && git rebase main
+cd docs/
+helm package ../helm
+helm repo index . --merge index.yaml --url https://sumologic.github.io/sumologic-kafka-push/
+git add -u && commit -m "Publish helm chart 0.x.x" && git push
+```
