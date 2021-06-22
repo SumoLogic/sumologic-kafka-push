@@ -98,5 +98,5 @@ git checkout main && git pull && git checkout gh-pages && git rebase main
 cd docs/
 helm package ../helm
 helm repo index . --merge index.yaml --url https://sumologic.github.io/sumologic-kafka-push/
-git add . && commit -m "Publish helm chart 0.x.x" && git push --force
+git add . && git commit -m "Publish helm chart 0.x.x" && git push --force
 ```
