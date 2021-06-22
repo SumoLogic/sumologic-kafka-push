@@ -34,7 +34,8 @@ case class JsonOptions(sourceCategoryJsonPath: Option[JsonPath],
                        sourceNameJsonPath: Option[JsonPath],
                        fieldJsonPaths: Option[Map[String, JsonPath]],
                        payloadWrapperKey: Option[String],
-                       payloadJsonPath: Option[JsonPath])
+                       payloadJsonPath: Option[JsonPath],
+                       payloadText: Option[Boolean])
 
 object SumoEndpointSerializer extends CustomSerializer[SumoEndpoint](_ => ( {
   case v: JValue =>
@@ -68,6 +69,7 @@ object JsonOptionsSerializer extends CustomSerializer[JsonOptions](_ => ( {
       sourceNameJsonPath = (v \ "sourceNameJsonPath").extractOpt[String].map(JsonPath.compile(_)),
       fieldJsonPaths = (v \ "fieldJsonPaths").extractOpt[Map[String, String]].map { m => m map { case (k, v) => (k, JsonPath.compile(v)) } },
       payloadWrapperKey = (v \ "payloadWrapperKey").extractOpt[String],
+      payloadText = (v \ "payloadText").extractOpt[Boolean],
       payloadJsonPath = (v \ "payloadJsonPath").extractOpt[String].map(JsonPath.compile(_))
     )
 }, {

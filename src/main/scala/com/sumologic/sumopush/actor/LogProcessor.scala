@@ -13,6 +13,7 @@ import com.sumologic.sumopush.model._
 import io.prometheus.client.Counter
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.json4s.JsonAST.{JArray, JObject}
+import org.json4s.native.Serialization
 import org.json4s.{DefaultFormats, Formats, JValue}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -23,6 +24,8 @@ import scala.util.{Failure, Success, Try}
 object LogProcessor extends MessageProcessor {
 
   case class EndpointFilter(name: String, container: String, regex: Option[String], pattern: Option[Pattern])
+
+  private val defaultJsonKey = "log"
 
   final val messages_failed = Counter.build()
     .name("messages_failed")
@@ -90,14 +93,15 @@ object LogProcessor extends MessageProcessor {
 
   def createSumoRequestsFromLogEvent(config: AppConfig, topic: String, logEvent: JsonLogEvent): Seq[SumoRequest] = {
     val endpoint = config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.map(_._2).get
-    val jsonOptions = endpoint.jsonOptions.map(opts => (opts.fieldJsonPaths, opts.payloadJsonPath))
-      .getOrElse((None, None))
+    val jsonOptions = endpoint.jsonOptions.map(opts => (opts.fieldJsonPaths, opts.payloadJsonPath, opts.payloadText.getOrElse(false)))
+      .getOrElse((None, None, false))
 
     val sourceCategory = findSourceNameOrCategory(endpoint.sourceCategory,
       endpoint.jsonOptions.flatMap(opts => opts.sourceCategoryJsonPath), topic, logEvent)
     val sourceName = findSourceNameOrCategory(endpoint.sourceName,
       endpoint.jsonOptions.flatMap(opts => opts.sourceNameJsonPath), topic, logEvent)
 
+    val format = if (jsonOptions._3) SumoDataFormat.text else SumoDataFormat.json
     val wrapperKey = endpoint.jsonOptions.flatMap(_.payloadWrapperKey)
 
     (logEvent.message match {
@@ -107,47 +111,60 @@ object LogProcessor extends MessageProcessor {
         List(findPayloadAndFields(jv, jsonOptions, wrapperKey))
     }).map {
       case (payload, fields) =>
+        val request = payload match {
+          case v: String => LogRequest(Instant.now().toEpochMilli, v)
+          case map: Map[String, Any] => RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ map.toSeq).toMap)
+        }
         SumoRequest(
           key = DefaultLogKey(sourceCategory),
           dataType = SumoDataType.logs,
-          format = SumoDataFormat.json,
+          format = format,
           endpointName = endpoint.name.getOrElse("default"),
           sourceName = sourceName,
           sourceCategory = sourceCategory,
           sourceHost = config.host,
-          fields = Seq.empty,
+          fields = fields,
           endpoint = endpoint.uri,
-          logs = Seq(RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ payload.toSeq ++ fields.toSeq).toMap)))
+          logs = Seq(request))
     }
   }
 
-  def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath]), key: Option[String]): (Map[String, Any], Map[String, Any]) = {
+  def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean), key: Option[String]): (Any, Seq[String]) = {
     implicit val formats: Formats = DefaultFormats
     val payload = (jsonOptions match {
-      case (_, Some(jp)) => jp.read(json).asInstanceOf[Any] match {
+      case (_, Some(jp), text) => (text, jp.read(json).asInstanceOf[Any] match {
         case s: String => s
         case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
         case ja: JArray => ja.arr.head match {
-          case o: JObject => ja.extract[List[Map[String, Any]]]
+          case _: JObject => ja.extract[List[Map[String, Any]]]
           case _ => ja.extract[List[Any]]
         }
         case jo: JObject => jo.extract[Map[String, Any]]
         case _ => json.extract[Map[String, Any]]
-      }
-      case _ => json.extract[Map[String, Any]]
+      })
+      case _ => (false, json.extract[Map[String, Any]])
     }) match {
-      case s: String => Map(key.getOrElse("log") -> s)
-      case l: List[_] => Map(key.getOrElse("log") -> l)
-      case m: Map[_, _] => key match {
+      case (true, v) => v match {
+        case s: String => s
+        case v => Serialization.write(v)
+      }
+      case (false, m: Map[_, _]) => key match {
         case Some(wk) => Map(wk -> m)
         case None => m.asInstanceOf[Map[String, Any]]
       }
+      case (false, v) => Map(key.getOrElse(defaultJsonKey) -> v)
     }
 
-    val fields: Map[String, String] = jsonOptions match {
-      case (Some(m), _) => m.map { case (key, path) => (key, path.read(json).asInstanceOf[Any]) }
-        .collect { case (k: String, v: String) => (k, v) }
-      case _ => Map.empty
+    val fields: Seq[String] = jsonOptions match {
+      case (Some(m), _, _) => m.map { case (key, path) => (key, path.read(json).asInstanceOf[Any] match {
+        case s: String => s
+        case v: BigInt => v.toString()
+        case v: Int => v.toString
+        case v: Long => v.toString
+        case v => v
+      })
+      }.collect { case (k: String, v: String) => s"$k=$v" }.toSeq
+      case _ => Seq.empty
     }
     (payload, fields)
   }
