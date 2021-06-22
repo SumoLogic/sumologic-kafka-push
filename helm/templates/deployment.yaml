@@ -55,18 +55,28 @@ spec:
             - name: SUMO_METRICS_URI
               value: {{ .Values.metrics.uri }}
             {{- end }}
+            {{- if .Values.kafka.serdeClass }}
+            - name: KAFKA_SERDE_CLASS_NAME
+              value: {{ .Values.kafka.serdeClass }}
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
           image: {{ .Values.image }}
           imagePullPolicy: Always
           name: push
           resources:
-{{ toYaml .Values.resources | indent 12 }}
+          {{- toYaml .Values.resources | nindent 12 }}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
-          {{- if .Values.endpointsSecret }}
           volumeMounts:
+          {{- if .Values.endpointsSecret }}
             - mountPath: /opt/docker/conf
               name: endpoints
               readOnly: true
+          {{- end }}
+          {{- if .Values.extraVolumeMounts }}
+          {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
           {{- end }}
           ports:
             - name: prometheus
@@ -87,11 +97,14 @@ spec:
           value: {{ .Values.workerGroupSelector }}
           effect: "NoSchedule"
       {{- end }}
-      {{- if .Values.endpointsSecret }}
       volumes:
+      {{- if .Values.endpointsSecret }}
         - name: endpoints
           secret:
             defaultMode: 420
             secretName: {{ .Values.endpointsSecret }}
+      {{- end }}
+      {{- if .Values.extraVolumes }}
+      {{- toYaml .Values.extraVolumes | nindent 8 }}
       {{- end }}
 

@@ -30,6 +30,26 @@ and is configured using the lag threshold in number of messages. Dependencies ne
 feature include: [keda](https://keda.sh/), [prometheus](https://github.com/prometheus-operator/prometheus-operator),
 and [kafka lag exporter](https://github.com/lightbend/kafka-lag-exporter).
 
+## Extra Volumes
+Extra volumes may be specified using `extraVolumes/extraVolumeMounts`. May be used to mount binary truststore/certstore
+ files stored in a secret.
+
+####Example
+To create secret: `kubectl create secret generic ssl-truststore --from-file=truststore.jks`
+Values snippet:
+```
+extraVolumes:
+  - name: truststore
+    secret:
+      defaultMode: 420
+      secretName: ssl-truststore
+extraVolumeMounts:
+  - mountPath: /opt/ssl
+    name: truststore
+    readOnly: true 
+```
+Then reference the file `/opt/ssl/truststore.jks` file in your endpoints secret kafka configuration.
+
 ## Values
 The `values.yaml` contains variables used to configure a deployment of this chart.
 
@@ -43,11 +63,14 @@ The `values.yaml` contains variables used to configure a deployment of this char
 | groupedSize | Message batch size to use for sending data | 30000 |
 | groupedDuration | Batch timeout if `groupedSize` is not hit | 1s |
 | endpointsSecret | Secret to mount containing endpoint and additional configuration | null |
-| servicemonitor.labels | Labels to append to servicemonitor for scraping metrics | {} |
+| extraEnvVars | Extra environment variables to set in the push container | [] |
+| extraVolumes | Extra volumes to mount in the push container | [] |
+| extraVolumeMounts | Extra volume mounts in the push container | [] |
 | cluster | Cluster metadata to attach to metrics | null |
 | logs.uri | Sumo logic api uri for logs (required if using default endpoint config and logs data type) | null |
 | metrics.uri | Sumo logic api uri for metrics (required if using default endpoint config and metrics data type) | null |
 | kafka.bootstrapServers | Bootstrap server kafka configuration | localhost:9092 |
+| kafka.serdeClass | Serde class for deserializing messages from kafka topic | default serde |
 | kafka.topic | Kafka topic to read messages from | kafka-push-logs |
 | kafka.consumerGroup | Kafka consumer group | kafka-push-logs |
 | autoscale.type | Pod autoscaling mechanism (hpa or keda) | hpa |
@@ -63,4 +86,6 @@ The `values.yaml` contains variables used to configure a deployment of this char
 | resources.limits.memory | Memory limit | 2Gi |
 | resources.requests.cpu | CPU request | 1 |
 | resources.requests.memory | Memory request | 512Mi |
+| servicemonitor.enabled | Deploy a servicemonitor for scraping metrics | true |
+| servicemonitor.labels | Labels to append to servicemonitor for scraping metrics | {} |
 
