@@ -124,7 +124,7 @@ Supported configuration for endpoint jsonOptions:
 | fieldJsonPaths     | Map of field name to jsonpath for metadata fields |
 | payloadWrapperKey  | Message key which contains the actual message  |
 | payloadJsonPath    | Jsonpath to the log payload  |
-| payloadText        | Sends the payload as raw text. The wrapper key will be ignored with this option  |
+| payloadText        | Sends the payload as raw text. The wrapper key will be ignored with this option. true of false  |
 
 ## Kubernetes configuration
 Overrides are available in kubernetes using pod annotations. These settings take precedence over default or endpoint settings.
