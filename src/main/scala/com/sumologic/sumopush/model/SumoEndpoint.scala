@@ -11,6 +11,7 @@ import java.util.regex.Pattern
 
 case class SumoEndpoint(name: Option[String],
                         uri: Uri,
+                        namespaces: Option[List[String]],
                         jsonOptions: Option[JsonOptions],
                         fieldName: Option[String],
                         fieldPattern: Option[Pattern],
@@ -43,6 +44,7 @@ object SumoEndpointSerializer extends CustomSerializer[SumoEndpoint](_ => ( {
     SumoEndpoint(
       name = (v \ "name").extract[Option[String]],
       uri = (v \ "uri").extract[Uri],
+      namespaces = (v \ "namespaces").extractOpt[List[String]],
       jsonOptions = (v \ "jsonOptions").extractOpt[JsonOptions],
       fieldName = (v \ "fieldName").extract[Option[String]],
       fieldPattern = (v \ "fieldPattern").extract[Option[Pattern]],

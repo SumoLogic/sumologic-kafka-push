@@ -26,7 +26,7 @@ object MetricProcessor extends MessageProcessor {
           (None, Some(offset))
         } else {
           config.getMetricEndpoint(pme) match {
-            case Some(endpoint@SumoEndpoint(Some(name), _, _, _, _, _, _, _)) =>
+            case Some(endpoint@SumoEndpoint(Some(name), _, _, _, _, _, _, _, _)) =>
               context.log.trace("sumo endpoint name: {}", name)
               messages_processed.labels(if (pme.labels.contains("container")) pme.labels("container") else "", name).inc()
               (Some(createSumoRequestFromLogEvent(config, endpoint, pme)), Some(offset))

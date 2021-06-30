@@ -93,6 +93,7 @@ endpoints: {
   logs: {
     uri: <ingestion uri>,
     default: true,
+    namespaces: ["foo", "bar"],
     sourceName: "weblogs",
     jsonOptions: {
       sourceCategoryJsonPath: "$.sourceSystem",
@@ -108,6 +109,7 @@ Supported configuration for endpoints:
 | ---------- | ------------------ |
 | uri       | URI address of sumo data ingestion endpoint |
 | name      | Name of endpoint  |
+| namespaces | Override default and return this endpoint if any of the namespaces in the list match the log event namespace (kubernetes only) |
 | jsonOptions | Options for generic JSON logs (see below) |
 | fieldName  | Log field name to match against.      |
 | fieldPattern | Pattern to match against when selecting this endpoint. In the case of metrics, this matches against the metric name. For logs, this matches against the value of `fieldName`  |

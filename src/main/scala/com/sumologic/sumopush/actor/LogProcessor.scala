@@ -223,9 +223,14 @@ object LogProcessor extends MessageProcessor {
       logEvent.metadata.annotations, logEvent.metadata.container)
   }
 
-  private def findEndpointName(config: AppConfig, logEvent: KubernetesLogEvent): String = {
-    findPodMetadataValue(EndpointAnnotationPrefix, config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.get._1,
-      logEvent.metadata.annotations, logEvent.metadata.container, Some(ep => config.sumoEndpoints.contains(ep)))
+  def findEndpointName(config: AppConfig, logEvent: KubernetesLogEvent): String = {
+    val defaultEp = config.sumoEndpoints.find{ case(_, endpoint) =>
+      endpoint.namespaces.getOrElse(List.empty[String]).contains(logEvent.metadata.namespace)} match {
+      case Some(ep) => ep._1
+      case None => config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.get._1
+    }
+    findPodMetadataValue(EndpointAnnotationPrefix, defaultEp, logEvent.metadata.annotations,
+      logEvent.metadata.container, Some(ep => config.sumoEndpoints.contains(ep)))
   }
 
   private def findEndpointFormat(logEvent: KubernetesLogEvent): Format = {
