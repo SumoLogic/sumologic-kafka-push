@@ -1,15 +1,55 @@
 package com.sumologic.sumopush
 
 import akka.http.scaladsl.model.{ContentTypes, Uri}
-import com.sumologic.sumopush.model.{PromMetricEventSerializer, SumoDataType}
+import com.sumologic.sumopush.actor.LogProcessor
+import com.sumologic.sumopush.model.{KubernetesLogEventSerializer, PromMetricEventSerializer, SumoDataType}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should._
 
+
 class ConfigTest extends AnyFlatSpec with Matchers {
+  val cfgEndpoints: Config = ConfigFactory.load().withFallback(ConfigFactory.load("test-endpoints"))
   val cfg: Config = ConfigFactory.load()
   val dataType: SumoDataType.Value = SumoDataType.withName(cfg.getString("sumopush.dataType"))
   val appConfig: AppConfig = AppConfig(dataType, cfg)
+
+  "config" should "load overlay properly" in {
+    assert(cfgEndpoints.getString("sumopush.cluster") == "default")
+    assert(cfgEndpoints.getString("sumopush.dataType") == "logs")
+    assert(cfgEndpoints.getConfig("endpoints.sbulogs").entrySet.size == 2)
+  }
+
+  "config" should "return the proper endpoint using namespace" in {
+    val epAppConfig = AppConfig(dataType, cfgEndpoints)
+    val logEventJson =
+      """
+      {
+        "file": "/var/log/pods/kute-test-0_5712test-244f-4743-aaa1-e8069a65test/logs/0.log",
+        "kns": "test",
+        "kubernetes": {
+          "container_name": "test",
+          "container_image": "docker/test",
+          "pod_labels": {
+            "app": "kube-test",
+            "controller-revision-hash": "kube-test-7b78d5test",
+            "statefulset.kubernetes.io/pod-name": "kube-test-0"
+          },
+          "pod_node_name": "ec2",
+          "pod_name": "kube-test-0",
+          "pod_namespace": "foo",
+          "pod_uid": "beefbeef-beef-beef-aaa1-beefbeefbeef"
+        },
+        "log_start": "2020-05-29 18:02:37",
+        "message": "2020-05-29 18:02:37.505199 I | http: TLS handshake error from 10.0.0.176:57946: remote error: tls: bad certificate\\nINFO             Round trip: GET https://172.1.0.1:443/api/v1/namespaces/test/pods?limit=500, code: 200, duration: 4.23751ms tls:version: 303 forward/fwd.go:196",
+        "source_type": "kubernetes_logs",
+        "stream": "stderr",
+        "timestamp": "2020-05-29T18:02:37.505244795Z"
+      }
+      """.stripMargin
+    val logEvent = KubernetesLogEventSerializer.fromJson(logEventJson)
+    assert(LogProcessor.findEndpointName(epAppConfig, logEvent) == "sbulogs")
+  }
 
   "config" should "load properly" in {
     assert(cfg.getString("sumopush.cluster") == "default")
