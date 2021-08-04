@@ -11,7 +11,7 @@ object Version {
   val AkkaHttpJson4s = "1.31.0"
   val AkkaKafka = "2.0.3"
   val ApacheKafkaClient = "2.7.0"
-  val PrometheusAkkaHttp = "0.5.0"
+  val PrometheusAkkaHttp = "0.5.1"
   val PrometheusClient = "0.8.1"
   val Re2j = "1.3"
   val Guava = "29.0-jre"
@@ -32,7 +32,7 @@ object Dependencies {
   val AkkaKafka = "com.typesafe.akka" %% "akka-stream-kafka" % Version.AkkaKafka
   val ApacheKafkaClient = "org.apache.kafka" % "kafka-clients" % Version.ApacheKafkaClient
 //  val ApacheKafkaConnect = "org.apache.kafka" % "connect-api" % Version.ApacheKafkaClient
-  val PrometheusAkkaHttp = "com.lonelyplanet" %% "prometheus-akka-http" % Version.PrometheusAkkaHttp
+  val PrometheusAkkaHttp = "com.varwise" %% "prometheus-akka-http" % Version.PrometheusAkkaHttp
   val PrometheusClient = "io.prometheus" % "simpleclient_hotspot" % Version.PrometheusClient
   val Re2j = "com.google.re2j" % "re2j" % Version.Re2j
   val Guava = "com.google.guava" % "guava" % Version.Guava

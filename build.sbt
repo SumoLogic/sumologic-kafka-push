@@ -56,9 +56,6 @@ lazy val sumologicKafkaPush =
         ScalacacheGuava,
         JsonPath
       ),
-      resolvers ++= Seq(
-        Resolver.bintrayRepo("lonelyplanet", "maven")
-      ),
       daemonUser in Docker := "sumo",
       daemonGroup in Docker := "sumo",
       daemonUserUid in Docker := Some("1000"),
