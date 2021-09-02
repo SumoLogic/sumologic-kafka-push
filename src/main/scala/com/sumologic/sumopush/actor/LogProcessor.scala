@@ -14,7 +14,7 @@ import io.prometheus.client.Counter
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.json4s.JsonAST.{JArray, JObject}
 import org.json4s.native.{JsonMethods, Serialization}
-import org.json4s.{DefaultFormats, Formats, JValue}
+import org.json4s.{DefaultFormats, Formats, JValue, JsonAST}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
@@ -175,6 +175,7 @@ object LogProcessor extends MessageProcessor {
         case (key, path) =>
           val value = path.read(json).asInstanceOf[Any] match {
             case s: String => s
+            case b: JsonAST.JBool => b.value.toString
             case v: BigInt => v.toString()
             case v: Int => v.toString
             case v: Long => v.toString
