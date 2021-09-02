@@ -3,6 +3,7 @@ package com.sumologic.sumopush.model
 import akka.http.scaladsl.model.Uri
 import com.jayway.jsonpath.JsonPath
 import org.json4s.JsonAST.{JString, JValue}
+import org.json4s.ext.EnumNameSerializer
 import org.json4s.native.Serialization
 import org.json4s.{CustomSerializer, DefaultFormats, Formats, StreamInput}
 
@@ -17,6 +18,7 @@ case class SumoEndpoint(name: Option[String],
                         fieldPattern: Option[Pattern],
                         sourceCategory: Option[String],
                         sourceName: Option[String],
+                        missingSrcCatStrategy: MissingSrcCatStrategy.Strategy = MissingSrcCatStrategy.FallbackToTopic,
                         default: Boolean = false) {
   def matchesPromMetric(promMetricEvent: PromMetricEvent): Boolean = {
     val fieldValue = fieldName match {
@@ -31,6 +33,13 @@ case class SumoEndpoint(name: Option[String],
   }
 }
 
+object MissingSrcCatStrategy extends Enumeration {
+  type Strategy = Value
+  val FallbackToTopic, Drop = Value
+
+  def withNameOpt(v: String): Option[Strategy] = MissingSrcCatStrategy.values.find(_.toString == v)
+}
+
 case class JsonOptions(sourceCategoryJsonPath: Option[JsonPath],
                        sourceNameJsonPath: Option[JsonPath],
                        fieldJsonPaths: Option[Map[String, JsonPath]],
@@ -40,7 +49,7 @@ case class JsonOptions(sourceCategoryJsonPath: Option[JsonPath],
 
 object SumoEndpointSerializer extends CustomSerializer[SumoEndpoint](_ => ( {
   case v: JValue =>
-    implicit val formats: Formats = DefaultFormats + JsonOptionsSerializer + RegexSerializer + UriSerializer
+    implicit val formats: Formats = DefaultFormats + JsonOptionsSerializer + RegexSerializer + UriSerializer + new EnumNameSerializer(MissingSrcCatStrategy)
     SumoEndpoint(
       name = (v \ "name").extract[Option[String]],
       uri = (v \ "uri").extract[Uri],
@@ -50,13 +59,14 @@ object SumoEndpointSerializer extends CustomSerializer[SumoEndpoint](_ => ( {
       fieldPattern = (v \ "fieldPattern").extract[Option[Pattern]],
       sourceCategory = (v \ "sourceCategory").extractOpt[String],
       sourceName = (v \ "sourceName").extractOpt[String],
+      missingSrcCatStrategy = (v \ "missingSrcCatStrategy").extractOpt[String].flatMap(MissingSrcCatStrategy.withNameOpt).getOrElse(MissingSrcCatStrategy.FallbackToTopic),
       default = (v \ "default").extractOrElse[Boolean](false)
     )
 }, {
   case _: SumoEndpoint =>
     throw new UnsupportedOperationException("Serialization of SumoEndpoint not supported")
 })) {
-  implicit val formats: Formats = DefaultFormats + JsonOptionsSerializer + RegexSerializer + UriSerializer
+  implicit val formats: Formats = DefaultFormats + JsonOptionsSerializer + RegexSerializer + UriSerializer + new EnumNameSerializer(MissingSrcCatStrategy)
 
   def fromJson(message: Array[Byte]): SumoEndpoint = Serialization.read[SumoEndpoint](StreamInput(new ByteArrayInputStream(message)))
 

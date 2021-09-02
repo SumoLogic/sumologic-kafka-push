@@ -13,7 +13,7 @@ import com.sumologic.sumopush.model._
 import io.prometheus.client.Counter
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.json4s.JsonAST.{JArray, JObject}
-import org.json4s.native.Serialization
+import org.json4s.native.{JsonMethods, Serialization}
 import org.json4s.{DefaultFormats, Formats, JValue}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -60,9 +60,12 @@ object LogProcessor extends MessageProcessor {
         context.system.log.trace("log key: {}", record.key())
         val reply = record.value() match {
           case Success(log@JsonLogEvent(_)) =>
-            val requests = createSumoRequestsFromLogEvent(config, record.topic(), log)
-            requests.foreach(request => messages_processed.labels(request.key.value, request.endpointName).inc())
-            (Some(requests), offset)
+            val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
+            if (requests.isEmpty) (None, offset)
+            else {
+              requests.foreach(request => messages_processed.labels(request.key.value, request.endpointName).inc())
+              (Some(requests), offset)
+            }
           case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
             val req = if (findContainerExclusion(log)) {
               messages_ignored.labels(metadata.container).inc()
@@ -91,57 +94,69 @@ object LogProcessor extends MessageProcessor {
     }
   }
 
-  def createSumoRequestsFromLogEvent(config: AppConfig, topic: String, logEvent: JsonLogEvent): Seq[SumoRequest] = {
+  def createSumoRequestsFromLogEvent(config: AppConfig, topic: String, logEvent: JsonLogEvent, logger: Logger): Seq[SumoRequest] = {
     val endpoint = config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.map(_._2).get
     val jsonOptions = endpoint.jsonOptions.map(opts => (opts.fieldJsonPaths, opts.payloadJsonPath, opts.payloadText.getOrElse(false)))
       .getOrElse((None, None, false))
 
+    val fallback = endpoint.missingSrcCatStrategy match {
+      case MissingSrcCatStrategy.FallbackToTopic => Some(topic)
+      case MissingSrcCatStrategy.Drop => None
+    }
     val sourceCategory = findSourceNameOrCategory(endpoint.sourceCategory,
-      endpoint.jsonOptions.flatMap(opts => opts.sourceCategoryJsonPath), topic, logEvent)
+      endpoint.jsonOptions.flatMap(opts => opts.sourceCategoryJsonPath), fallback, logEvent)
     val sourceName = findSourceNameOrCategory(endpoint.sourceName,
-      endpoint.jsonOptions.flatMap(opts => opts.sourceNameJsonPath), topic, logEvent)
+      endpoint.jsonOptions.flatMap(opts => opts.sourceNameJsonPath), fallback, logEvent)
 
     val format = if (jsonOptions._3) SumoDataFormat.text else SumoDataFormat.json
     val wrapperKey = endpoint.jsonOptions.flatMap(_.payloadWrapperKey)
 
-    (logEvent.message match {
-      case ja: JArray =>
-        ja.arr.map(jv => findPayloadAndFields(jv, jsonOptions, wrapperKey))
-      case jv: JValue =>
-        List(findPayloadAndFields(jv, jsonOptions, wrapperKey))
-    }).map {
-      case (payload, fields) =>
-        val request = payload match {
-          case v: String => LogRequest(Instant.now().toEpochMilli, v)
-          case map: Map[String, Any] => RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ map.toSeq).toMap)
+    (sourceCategory, sourceName) match {
+      case (Some(cat), Some(name)) =>
+        (logEvent.message match {
+          case ja: JArray =>
+            ja.arr.map(jv => findPayloadAndFields(jv, jsonOptions, wrapperKey))
+          case jv: JValue =>
+            List(findPayloadAndFields(jv, jsonOptions, wrapperKey))
+        }).map {
+          case (payload, fields) =>
+            val request = payload match {
+              case v: String => LogRequest(Instant.now().toEpochMilli, v)
+              case map: Map[String, Any] => RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ map.toSeq).toMap)
+            }
+            SumoRequest(
+              key = DefaultLogKey(cat),
+              dataType = SumoDataType.logs,
+              format = format,
+              endpointName = endpoint.name.getOrElse("default"),
+              sourceName = name,
+              sourceCategory = cat,
+              sourceHost = config.host,
+              fields = fields,
+              endpoint = endpoint.uri,
+              logs = Seq(request))
         }
-        SumoRequest(
-          key = DefaultLogKey(sourceCategory),
-          dataType = SumoDataType.logs,
-          format = format,
-          endpointName = endpoint.name.getOrElse("default"),
-          sourceName = sourceName,
-          sourceCategory = sourceCategory,
-          sourceHost = config.host,
-          fields = fields,
-          endpoint = endpoint.uri,
-          logs = Seq(request))
+      case _ =>
+        logger.warn(s"Unable to determine source category or name in the message: ${JsonMethods.compact(JsonMethods.render(logEvent.message))}")
+        Nil
     }
   }
 
   def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean), key: Option[String]): (Any, Seq[String]) = {
     implicit val formats: Formats = DefaultFormats
     val payload = (jsonOptions match {
-      case (_, Some(jp), text) => (text, jp.read(json).asInstanceOf[Any] match {
-        case s: String => s
-        case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
-        case ja: JArray => ja.arr.head match {
-          case _: JObject => ja.extract[List[Map[String, Any]]]
-          case _ => ja.extract[List[Any]]
+      case (_, Some(jp), text) =>
+        val value = jp.read(json).asInstanceOf[Any] match {
+          case s: String => s
+          case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
+          case ja: JArray => ja.arr.head match {
+            case _: JObject => ja.extract[List[Map[String, Any]]]
+            case _ => ja.extract[List[Any]]
+          }
+          case jo: JObject => jo.extract[Map[String, Any]]
+          case _ => json.extract[Map[String, Any]]
         }
-        case jo: JObject => jo.extract[Map[String, Any]]
-        case _ => json.extract[Map[String, Any]]
-      })
+        (text, value)
       case _ => (false, json.extract[Map[String, Any]])
     }) match {
       case (true, v) => v match {
@@ -156,28 +171,33 @@ object LogProcessor extends MessageProcessor {
     }
 
     val fields: Seq[String] = jsonOptions match {
-      case (Some(m), _, _) => m.map { case (key, path) => (key, path.read(json).asInstanceOf[Any] match {
-        case s: String => s
-        case v: BigInt => v.toString()
-        case v: Int => v.toString
-        case v: Long => v.toString
-        case v => v
-      })
+      case (Some(m), _, _) => m.map {
+        case (key, path) =>
+          val value = path.read(json).asInstanceOf[Any] match {
+            case s: String => s
+            case v: BigInt => v.toString()
+            case v: Int => v.toString
+            case v: Long => v.toString
+            case v => v
+          }
+          (key, value)
       }.collect { case (k: String, v: String) => s"$k=$v" }.toSeq
       case _ => Seq.empty
     }
     (payload, fields)
   }
 
-  def findSourceNameOrCategory(fixed: Option[String], jsonPath: Option[JsonPath], topic: String, logEvent: JsonLogEvent): String = {
+  def findSourceNameOrCategory(fixed: Option[String], jsonPath: Option[JsonPath], fallback: Option[String], logEvent: JsonLogEvent): Option[String] = {
     val jsonOpts = (fixed, jsonPath)
     jsonOpts match {
-      case (_, Some(jp)) => jp.read(logEvent.message).asInstanceOf[String] match {
-        case null | "" => topic
-        case v => v
-      }
-      case (Some(fixed), _) => fixed
-      case _ => topic
+      case (_, Some(jp)) =>
+        jp.read(logEvent.message).asInstanceOf[Any] match {
+          case null | "" => fallback
+          case v: String => Some(v)
+          case _ => fallback
+        }
+      case (Some(fixed), _) => Some(fixed)
+      case _ => fallback
     }
   }
 

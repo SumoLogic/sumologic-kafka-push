@@ -28,6 +28,7 @@ object Dependencies {
   val AkkaHttp = "com.typesafe.akka" %% "akka-http" % Version.AkkaHttp
   val Logback = "ch.qos.logback" % "logback-classic" % Version.Logback
   val Json4sNative = "org.json4s" %% "json4s-native" % Version.Json4s
+  val Json4sExt = "org.json4s" %% "json4s-ext" % Version.Json4s
   val AkkaHttpJson4s = "de.heikoseeberger" %% "akka-http-json4s" % Version.AkkaHttpJson4s
   val AkkaKafka = "com.typesafe.akka" %% "akka-stream-kafka" % Version.AkkaKafka
   val ApacheKafkaClient = "org.apache.kafka" % "kafka-clients" % Version.ApacheKafkaClient

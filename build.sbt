@@ -43,6 +43,7 @@ lazy val sumologicKafkaPush =
         AkkaHttp,
         Logback,
         Json4sNative,
+        Json4sExt,
         AkkaHttpJson4s,
         AkkaKafka,
         ApacheKafkaClient,
