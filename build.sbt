@@ -55,7 +55,8 @@ lazy val sumologicKafkaPush =
         Skuber,
         ScalacacheCore,
         ScalacacheGuava,
-        JsonPath
+        JsonPath,
+        Mockito
       ),
       resolvers ++= Seq(
         Resolver.bintrayRepo("lonelyplanet", "maven")

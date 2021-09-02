@@ -2,12 +2,10 @@ package com.sumologic.sumopush
 
 import com.sumologic.sumopush.model._
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should._
 
 import java.time.Instant
 
-class PromMetricModelSpec extends AnyFlatSpec with Matchers {
+class PromMetricModelSpec extends BaseTest {
   val cfg: Config = ConfigFactory.load()
   val dataType: SumoDataType.Value = SumoDataType.withName(cfg.getString("sumopush.dataType"))
   val appConfig: AppConfig = AppConfig(dataType, cfg)

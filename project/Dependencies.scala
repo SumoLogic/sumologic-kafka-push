@@ -18,6 +18,8 @@ object Version {
   val Skuber = "2.6.0"
   val Scalacache = "0.28.0"
   val JsonPath = "2.5.0"
+
+  val Mockito = "3.2.9.0"
 }
 
 object Dependencies {
@@ -44,4 +46,5 @@ object Dependencies {
 
   val ScalaTest = "org.scalatest" %% "scalatest" % Version.ScalaTest % Test
   val AkkaTypedTestKit = "com.typesafe.akka" %% "akka-actor-testkit-typed" % Version.Akka % Test
+  val Mockito = "org.scalatestplus" %% "mockito-3-4" % Version.Mockito % Test
 }
