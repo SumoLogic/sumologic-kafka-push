@@ -76,18 +76,22 @@ object SumoPushMain {
       .withStopTimeout(Duration.Zero)
   }
 
-  def main(args: Array[String]): Unit = {
-    val log = LoggerFactory.getLogger(getClass)
-    log.info("starting sumo push...")
-
+  def configureJsonPath(): Unit = {
     // jsonpath config
     Configuration.setDefaults(new Configuration.Defaults {
       override def jsonProvider(): JsonProvider = Json4sProvider
 
-      override def options(): util.Set[jsonpath.Option] = Set[jsonpath.Option]().asJava
+      override def options(): util.Set[jsonpath.Option] = Set(jsonpath.Option.SUPPRESS_EXCEPTIONS).asJava
 
       override def mappingProvider(): MappingProvider = new JacksonMappingProvider()
     })
+  }
+
+  def main(args: Array[String]): Unit = {
+    val log = LoggerFactory.getLogger(getClass)
+    log.info("starting sumo push...")
+
+    configureJsonPath()
 
     val confFile = new File("/opt/docker/conf/application.conf")
     val config = if (confFile.exists() && confFile.canRead) {

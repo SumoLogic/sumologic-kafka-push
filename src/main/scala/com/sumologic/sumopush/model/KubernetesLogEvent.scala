@@ -36,6 +36,7 @@ object KubernetesLogEventSerializer extends CustomSerializer[KubernetesLogEvent]
   case kle: KubernetesLogEvent =>
     implicit val formats: Formats = DefaultFormats + KubernetesSerializer
     ("message" -> kle.message) ~
+      ("stream" -> kle.stream) ~
       ("timestamp" -> kle.timestamp.map(Instant.ofEpochMilli(_).atZone(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))) ~
       ("kubernetes" -> Extraction.decompose(kle.metadata))
 })) {

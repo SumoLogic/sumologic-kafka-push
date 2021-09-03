@@ -4,11 +4,9 @@ import akka.http.scaladsl.model.{ContentTypes, Uri}
 import com.sumologic.sumopush.actor.LogProcessor
 import com.sumologic.sumopush.model.{KubernetesLogEventSerializer, PromMetricEventSerializer, SumoDataType}
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should._
 
 
-class ConfigTest extends AnyFlatSpec with Matchers {
+class ConfigTest extends BaseTest {
   val cfgEndpoints: Config = ConfigFactory.load().withFallback(ConfigFactory.load("test-endpoints"))
   val cfg: Config = ConfigFactory.load()
   val dataType: SumoDataType.Value = SumoDataType.withName(cfg.getString("sumopush.dataType"))

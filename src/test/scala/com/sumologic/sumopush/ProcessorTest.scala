@@ -4,12 +4,10 @@ import com.sumologic.sumopush.actor.MessageProcessor
 import com.sumologic.sumopush.actor.MessageProcessor._
 import com.sumologic.sumopush.model.SumoDataType
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should._
 
 class TestProcessor extends MessageProcessor {}
 
-class ProcessorTest extends AnyFlatSpec with Matchers {
+class ProcessorTest extends BaseTest {
   val cfg: Config = ConfigFactory.load()
   val dataType: SumoDataType.Value = SumoDataType.withName(cfg.getString("sumopush.dataType"))
   val appConfig: AppConfig = AppConfig(dataType, cfg)

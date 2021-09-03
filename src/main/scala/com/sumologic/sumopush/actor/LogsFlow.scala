@@ -29,6 +29,7 @@ object LogsFlow {
             ConsumerLogMessage(message.record, message.committableOffset, replyTo)
         })
         .mapConcat {
+          case (Some(requests), offset) if requests.isEmpty => List((None, Some(offset)))
           case (Some(requests), offset) => ((Some(requests.head), Some(offset)) +: requests.drop(1).map(r => (Some(r), None))).toList
           case (None, offset) => List((None, Some(offset)))
         })

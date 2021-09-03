@@ -1,0 +1,14 @@
+{
+  "log": {
+    "log": "I0416 19:32:53.813537       1 utils.go:467] Removing unregistered node aws:///us-west-2c/i-testtesttest1test\n"
+  },
+  "category": {
+    "source": "sourceCategory"
+  },
+  "name": {
+    "source": "sourceName"
+  },
+  "some": {
+    "field": "fieldValue"
+  }
+}

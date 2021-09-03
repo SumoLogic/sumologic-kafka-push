@@ -43,6 +43,7 @@ lazy val sumologicKafkaPush =
         AkkaHttp,
         Logback,
         Json4sNative,
+        Json4sExt,
         AkkaHttpJson4s,
         AkkaKafka,
         ApacheKafkaClient,
@@ -54,7 +55,8 @@ lazy val sumologicKafkaPush =
         Skuber,
         ScalacacheCore,
         ScalacacheGuava,
-        JsonPath
+        JsonPath,
+        Mockito
       ),
       resolvers ++= Seq(
         Resolver.bintrayRepo("lonelyplanet", "maven")

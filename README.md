@@ -116,6 +116,7 @@ Supported configuration for endpoints:
 | default    | Use this endpoint as the default in case no match is made |
 | sourceCategory | Default source category | 
 | sourceName | Default source name | 
+| missingSrcCatStrategy | What to do if unable to determine source category or source name based on the configuration. `FallbackToTopic` (default) sets missing metadata to topic name, `Drop` logs the error and ignores the message |
 
 Supported configuration for endpoint jsonOptions:
 
@@ -126,7 +127,7 @@ Supported configuration for endpoint jsonOptions:
 | fieldJsonPaths     | Map of field name to jsonpath for metadata fields |
 | payloadWrapperKey  | Message key which contains the actual message  |
 | payloadJsonPath    | Jsonpath to the log payload  |
-| payloadText        | Sends the payload as raw text. The wrapper key will be ignored with this option. true of false  |
+| payloadText        | Sends the payload as raw text. The wrapper key will be ignored with this option. true or false  |
 
 ## Kubernetes configuration
 Overrides are available in kubernetes using pod annotations. These settings take precedence over default or endpoint settings.

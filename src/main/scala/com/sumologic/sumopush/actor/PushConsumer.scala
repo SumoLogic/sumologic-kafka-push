@@ -44,7 +44,7 @@ object PushConsumer {
       .toMat(Committer.sink(committerSettings))(Keep.both)
       .mapMaterializedValue(DrainingControl.apply[Done])
       .withAttributes(ActorAttributes.withSupervisionStrategy(e => {
-        context.log.error("stream error", e)
+        log.error("stream error", e)
         context.self ! ConsumerShutdown
         Supervision.Stop
       }))
