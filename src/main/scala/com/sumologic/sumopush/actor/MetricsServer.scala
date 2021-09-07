@@ -5,8 +5,8 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{Behavior, PostStop}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
-import com.lonelyplanet.prometheus.PrometheusResponseTimeRecorder
-import com.lonelyplanet.prometheus.api.MetricsEndpoint
+import com.varwise.akka.http.prometheus.PrometheusResponseTimeRecorder
+import com.varwise.akka.http.prometheus.api.MetricsEndpoint
 import com.sumologic.sumopush.AppConfig
 import io.prometheus.client.hotspot.DefaultExports
 
