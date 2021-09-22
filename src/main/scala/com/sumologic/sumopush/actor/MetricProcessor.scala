@@ -18,20 +18,20 @@ object MetricProcessor extends MessageProcessor {
   case class ConsumerMetricMessage(msg: Option[PromMetricEvent], offset: CommittableOffset,
                                    replyTo: ActorRef[(Option[SumoRequest], Option[CommittableOffset])]) extends MetricMessage
 
-  def apply(config: AppConfig): Behavior[MetricMessage] = Behaviors.receive { (context, message) =>
+  def apply(config: AppConfig, stats: MessageProcessor.Stats): Behavior[MetricMessage] = Behaviors.receive { (context, message) =>
     message match {
       case ConsumerMetricMessage(Some(pme), offset, replyTo) =>
         val reply = if (ignoreMetric(pme)) {
-          messages_ignored.labels(if (pme.labels.contains("container")) pme.labels("container") else "").inc()
+          stats.messagesIgnored.labels(if (pme.labels.contains("container")) pme.labels("container") else "").inc()
           (None, Some(offset))
         } else {
           config.getMetricEndpoint(pme) match {
             case Some(endpoint@SumoEndpoint(Some(name), _, _, _, _, _, _, _, _, _)) =>
               context.log.trace("sumo endpoint name: {}", name)
-              messages_processed.labels(if (pme.labels.contains("container")) pme.labels("container") else "", name).inc()
+              stats.messagesProcessed.labels(if (pme.labels.contains("container")) pme.labels("container") else "", name).inc()
               (Some(createSumoRequestFromLogEvent(config, endpoint, pme)), Some(offset))
             case _ =>
-              messages_ignored.labels(if (pme.labels.contains("container")) pme.labels("container") else "").inc()
+              stats.messagesIgnored.labels(if (pme.labels.contains("container")) pme.labels("container") else "").inc()
               (None, Some(offset))
           }
         }

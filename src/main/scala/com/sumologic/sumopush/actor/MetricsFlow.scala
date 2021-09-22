@@ -28,14 +28,16 @@ object MetricsFlow {
 
   case class ParsedMetricMessage(pme: Option[PromMetricEvent], offset: CommittableOffset)
 
-  def apply(context: ActorContext[ConsumerCommand], config: AppConfig): Graph[FlowShape[CommittableMessage[String, Try[PromMetricEvent]], (Option[SumoRequest], Option[CommittableOffset])], NotUsed] =
+  def apply(
+             context: ActorContext[ConsumerCommand], config: AppConfig, stats: MessageProcessor.Stats
+           ): Graph[FlowShape[CommittableMessage[String, Try[PromMetricEvent]], (Option[SumoRequest], Option[CommittableOffset])], NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder => {
       implicit val timeout: Timeout = 5.minutes
 
       val k8sMetaCache = context.spawn(MetricsK8sMetadataCache(), "k8s-meta-cache")
       context.watch(k8sMetaCache)
 
-      val processor = context.spawn(MetricProcessor(config), "metric-processor")
+      val processor = context.spawn(MetricProcessor(config, stats), "metric-processor")
       context.watch(processor)
 
       builder.add(Flow[CommittableMessage[String, Try[PromMetricEvent]]]

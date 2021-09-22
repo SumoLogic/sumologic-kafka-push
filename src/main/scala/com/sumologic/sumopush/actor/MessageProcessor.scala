@@ -10,19 +10,24 @@ object MessageProcessor {
   val FormatAnnotationPrefix = s"$MetadataKeyPrefix/format"
   val EndpointFilterAnnotationPrefix = s"$MetadataKeyPrefix/filter"
   val SourceNameAnnotationPrefix = s"$MetadataKeyPrefix/sourceName"
+
+  def registerStats(): Stats = {
+    val messagesProcessed: Counter = Counter.build()
+      .name("messages_processed")
+      .help("Total messages processed")
+      .labelNames("container", "sumo_endpoint").register()
+    val messagesIgnored = Counter.build()
+      .name("messages_ignored")
+      .help("Total messages ignored")
+      .labelNames("container").register()
+
+    Stats(messagesProcessed, messagesIgnored)
+  }
+
+  case class Stats(messagesProcessed: Counter, messagesIgnored: Counter)
 }
 
 trait MessageProcessor {
-
-  final val messages_processed = Counter.build()
-    .name("messages_processed")
-    .help("Total messages processed")
-    .labelNames("container", "sumo_endpoint").register()
-  final val messages_ignored = Counter.build()
-    .name("messages_ignored")
-    .help("Total messages ignored")
-    .labelNames("container").register()
-
   def findPodMetadataValue[V](metadataKeyPrefix: String, defaultValue: V, metadata: Map[String, String],
                                       container: String, validateOpt: Option[String => Boolean] = None,
                                       convertValueOpt: Option[String => V] = None): V = {
