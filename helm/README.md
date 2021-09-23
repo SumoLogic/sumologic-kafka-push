@@ -55,7 +55,7 @@ The `values.yaml` contains variables used to configure a deployment of this char
 
 | Name | Description      | Default  |
 |------|------------------|----------|
-| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:latest |
+| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:0.3.9 |
 | metricsPort | The port to expose prometheus metrics on | 8080 |
 | logLevel | Logging level | warn |
 | replicas | Desired replica count to deploy | 1 |
