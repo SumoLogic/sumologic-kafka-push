@@ -14,7 +14,7 @@ import io.prometheus.client.Counter
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.json4s.JsonAST.{JArray, JObject}
 import org.json4s.native.{JsonMethods, Serialization}
-import org.json4s.{DefaultFormats, Formats, JValue, JsonAST}
+import org.json4s.{DefaultFormats, Formats, JNothing, JValue, JsonAST}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
@@ -59,6 +59,9 @@ object LogProcessor extends MessageProcessor {
       case ConsumerLogMessage(record, offset, replyTo) =>
         context.system.log.trace("log key: {}", record.key())
         val reply = record.value() match {
+          case Success(_@JsonLogEvent(JNothing)) =>
+            context.log.trace("ignoring empty message")
+            (None, offset)
           case Success(log@JsonLogEvent(_)) =>
             val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
             if (requests.isEmpty) (None, offset)
