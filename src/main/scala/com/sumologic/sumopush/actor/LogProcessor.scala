@@ -79,6 +79,9 @@ object LogProcessor extends MessageProcessor {
               Some(requests)
             }
             (req, offset)
+          case Success(null) =>
+            context.log.trace("ignoring null message")
+            (None, offset)
           case Failure(e) =>
             val exName = e.toString.split(":")(0)
             messages_failed.labels(exName).inc()

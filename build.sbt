@@ -65,7 +65,7 @@ lazy val sumologicKafkaPush =
       dockerExposedPorts in Docker ++= Seq(8080),
       dockerRepository := Some("public.ecr.aws/sumologic"),
       dockerUsername := Option(System.getenv("DOCKER_USERNAME")).orElse(None),
-      dockerBaseImage := "public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11",
+      dockerBaseImage := "public.ecr.aws/u5z5f8z6/sumologic-kafka-push:focal-corretto-11",
     )
 
 region in Ecr := Region.getRegion(Regions.US_WEST_2)
