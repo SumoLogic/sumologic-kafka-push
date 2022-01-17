@@ -87,7 +87,9 @@ object LogProcessor extends MessageProcessor {
             messages_failed.labels(exName).inc()
             context.log.error("unable to parse log message {}", e.getMessage, e)
             (None, offset)
-          case _ => throw new UnsupportedOperationException("unknown LogEvent type")
+          case ev =>
+            context.log.error(s"unknown LogEvent type $ev")
+            (None, offset)
         }
         replyTo ! reply
         Behaviors.same
