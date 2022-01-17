@@ -57,7 +57,7 @@ object LogProcessor extends MessageProcessor {
   def apply(config: AppConfig): Behavior[LogMessage[_]] = Behaviors.setup { context =>
     Behaviors.receiveMessage[LogMessage[_]] {
       case ConsumerLogMessage(record, offset, replyTo) =>
-        context.system.log.trace("log key: {}", record.key())
+        context.system.log.trace("log key: {}, value: {}", record.key(), record.value())
         val reply = record.value() match {
           case Success(_@JsonLogEvent(JNothing)) =>
             context.log.trace("ignoring empty message")
