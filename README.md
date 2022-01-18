@@ -5,7 +5,7 @@ A containerized application for scalable, high-performance log and metric ingest
 from Kafka. May either be run in Kubernetes or Docker environments.
 
 ## Installation
-The latest sumologic-kafka-push docker image is hosted in our public repository at `public.ecr.aws/sumologic/sumologic-kafka-push:0.3.9`
+The latest sumologic-kafka-push docker image is hosted in our public repository at `public.ecr.aws/sumologic/sumologic-kafka-push:0.3.10`
 ### Docker
 A docker compose file is available on request.
 ### Kubernetes
@@ -145,7 +145,9 @@ Any override settings can be applied on a per-container basis by appending `.<co
 ## For developers
 ### Publish docker image
 #### Refresh Docker Login
-Need docker 
+Need docker and credentials to access the account containing the public.ecr.aws/sumologic repository.
+
+First login to the ECR repository:
 `aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/sumologic`
 
 #### Publish Base Image (if necessary)

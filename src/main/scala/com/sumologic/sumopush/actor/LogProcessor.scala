@@ -60,7 +60,10 @@ object LogProcessor extends MessageProcessor {
         context.system.log.trace("log key: {}", record.key())
         val reply = record.value() match {
           case Success(_@JsonLogEvent(JNothing)) =>
-            context.log.trace("ignoring empty message")
+            context.log.warn("ignoring empty message")
+            (None, offset)
+          case null =>
+            context.log.warn("ignoring null message")
             (None, offset)
           case Success(log@JsonLogEvent(_)) =>
             val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
