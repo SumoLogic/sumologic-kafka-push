@@ -6,7 +6,7 @@ object Version {
   val Akka = "2.6.13"
   val AkkaHttp = "10.2.4"
   val ScalaTest = "3.1.1"
-  val Logback = "1.2.3"
+  val Logback = "1.2.10"
   val Json4s = "3.6.7"
   val AkkaHttpJson4s = "1.31.0"
   val AkkaKafka = "2.0.3"
