@@ -104,7 +104,7 @@ object LogPusher {
       RawHeader(XSumoHostHeader, sumoRequest.sourceHost),
       RawHeader(XSumoClientHeader, "sumologic-kafka-push"))
     if (sumoRequest.fields.nonEmpty) {
-      headers += RawHeader(XSumoFields, sumoRequest.fields.mkString(","))
+      headers += RawHeader(XSumoFields, sumoRequest.fields.map(_.toHeaderPart).mkString(","))
     }
 
     val request = HttpRequest()
