@@ -54,7 +54,7 @@ object LogProcessor extends MessageProcessor {
 
   case class ConsumerLogMessage[K](record: ConsumerRecord[K, Try[LogEvent[Any]]], offset: CommittableOffset, replyTo: ActorRef[(Option[Seq[SumoRequest]], CommittableOffset)]) extends LogMessage[K]
 
-  def apply(config: AppConfig): Behavior[LogMessage[_]] = Behaviors.setup { context =>
+  def apply(config: AppConfig, stats: MessageProcessor.Stats): Behavior[LogMessage[_]] = Behaviors.setup { context =>
     Behaviors.receiveMessage[LogMessage[_]] {
       case ConsumerLogMessage(record, offset, replyTo) =>
         context.system.log.trace("log key: {}", record.key())
@@ -69,16 +69,16 @@ object LogProcessor extends MessageProcessor {
             val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
             if (requests.isEmpty) (None, offset)
             else {
-              requests.foreach(request => messages_processed.labels(request.key.value, request.endpointName).inc())
+              requests.foreach(request => stats.messagesProcessed.labels(request.key.value, request.endpointName).inc())
               (Some(requests), offset)
             }
           case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
             val req = if (findContainerExclusion(log)) {
-              messages_ignored.labels(metadata.container).inc()
+              stats.messagesIgnored.labels(metadata.container).inc()
               None
             } else {
               val requests = createSumoRequestsFromLogEvent(config, log)
-              requests.foreach(request => messages_processed.labels(log.metadata.container, request.endpointName).inc())
+              requests.foreach(request => stats.messagesProcessed.labels(log.metadata.container, request.endpointName).inc())
               Some(requests)
             }
             (req, offset)
