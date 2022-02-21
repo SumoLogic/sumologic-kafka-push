@@ -14,7 +14,7 @@ import io.prometheus.client.Counter
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.json4s.JsonAST.{JArray, JObject}
 import org.json4s.native.{JsonMethods, Serialization}
-import org.json4s.{DefaultFormats, Formats, JValue, JsonAST}
+import org.json4s.{DefaultFormats, Formats, JNothing, JValue, JsonAST}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
@@ -54,25 +54,31 @@ object LogProcessor extends MessageProcessor {
 
   case class ConsumerLogMessage[K](record: ConsumerRecord[K, Try[LogEvent[Any]]], offset: CommittableOffset, replyTo: ActorRef[(Option[Seq[SumoRequest]], CommittableOffset)]) extends LogMessage[K]
 
-  def apply(config: AppConfig): Behavior[LogMessage[_]] = Behaviors.setup { context =>
+  def apply(config: AppConfig, stats: MessageProcessor.Stats): Behavior[LogMessage[_]] = Behaviors.setup { context =>
     Behaviors.receiveMessage[LogMessage[_]] {
       case ConsumerLogMessage(record, offset, replyTo) =>
         context.system.log.trace("log key: {}", record.key())
         val reply = record.value() match {
+          case Success(_@JsonLogEvent(JNothing)) =>
+            context.log.warn("ignoring empty message")
+            (None, offset)
+          case null =>
+            context.log.warn("ignoring null message")
+            (None, offset)
           case Success(log@JsonLogEvent(_)) =>
             val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
             if (requests.isEmpty) (None, offset)
             else {
-              requests.foreach(request => messages_processed.labels(request.key.value, request.endpointName).inc())
+              requests.foreach(request => stats.messagesProcessed.labels(request.key.value, request.endpointName).inc())
               (Some(requests), offset)
             }
           case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
             val req = if (findContainerExclusion(log)) {
-              messages_ignored.labels(metadata.container).inc()
+              stats.messagesIgnored.labels(metadata.container).inc()
               None
             } else {
               val requests = createSumoRequestsFromLogEvent(config, log)
-              requests.foreach(request => messages_processed.labels(log.metadata.container, request.endpointName).inc())
+              requests.foreach(request => stats.messagesProcessed.labels(log.metadata.container, request.endpointName).inc())
               Some(requests)
             }
             (req, offset)
@@ -81,7 +87,7 @@ object LogProcessor extends MessageProcessor {
             messages_failed.labels(exName).inc()
             context.log.error("unable to parse log message {}", e.getMessage, e)
             (None, offset)
-          case _ => throw new UnsupportedOperationException("unknown LogEvent type")
+          case ev => throw new UnsupportedOperationException(s"unknown LogEvent type: $ev")
         }
         replyTo ! reply
         Behaviors.same

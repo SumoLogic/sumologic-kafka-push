@@ -32,7 +32,7 @@ object SumoPushMain {
 
   private val log = LoggerFactory.getLogger(getClass)
 
-  def apply(config: AppConfig): Behavior[NotUsed] = Behaviors.supervise(
+  def apply(config: AppConfig, stats: MessageProcessor.Stats): Behavior[NotUsed] = Behaviors.supervise(
     Behaviors.setup[NotUsed] { context =>
       implicit val executionContext: ExecutionContext = context.executionContext
 
@@ -40,10 +40,20 @@ object SumoPushMain {
       val consumer = config.dataType match {
         case SumoDataType.logs =>
           val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, loadSerde(config.serdeClass)))
-          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => LogsFlow(context, config)), "log-consumer")
+          val pushConsumer = PushConsumer(
+            config,
+            Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)),
+            context => LogsFlow(context, config, stats)
+          )
+          context.spawn(pushConsumer, "log-consumer")
         case SumoDataType.metrics =>
           val settings = commonConsumerSettings(config, ConsumerSettings(context.system, new StringDeserializer, PromMetricEventSerde))
-          context.spawn(PushConsumer(config, Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)), context => MetricsFlow(context, config)), "metric-consumer")
+          val pushConsumer = PushConsumer(
+            config,
+            Consumer.committableSource(settings, Subscriptions.topicPattern(config.topic)),
+            context => MetricsFlow(context, config, stats)
+          )
+          context.spawn(pushConsumer, "metric-consumer")
       }
       context.watch(consumer)
 
@@ -92,6 +102,7 @@ object SumoPushMain {
     log.info("starting sumo push...")
 
     configureJsonPath()
+    val msgProcessorStats = MessageProcessor.registerStats()
 
     val confFile = new File("/opt/docker/conf/application.conf")
     val config = if (confFile.exists() && confFile.canRead) {
@@ -109,6 +120,6 @@ object SumoPushMain {
       case t => throw new UnsupportedOperationException(s"invalid data type $t")
     })
 
-    ActorSystem(SumoPushMain(appConfig).behavior, "sumo-push-main", config)
+    ActorSystem(SumoPushMain(appConfig, msgProcessorStats).behavior, "sumo-push-main", config)
   }
 }
