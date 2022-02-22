@@ -148,7 +148,7 @@ object LogProcessor extends MessageProcessor {
     }
   }
 
-  def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean), key: Option[String]): (Any, Seq[String]) = {
+  def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean), key: Option[String]): (Any, Seq[HeaderField]) = {
     implicit val formats: Formats = DefaultFormats
     val payload = (jsonOptions match {
       case (_, Some(jp), text) =>
@@ -176,7 +176,7 @@ object LogProcessor extends MessageProcessor {
       case (false, v) => Map(key.getOrElse(defaultJsonKey) -> v)
     }
 
-    val fields: Seq[String] = jsonOptions match {
+    val fields: Seq[HeaderField] = jsonOptions match {
       case (Some(m), _, _) => m.map {
         case (key, path) =>
           val value = path.read(json).asInstanceOf[Any] match {
@@ -188,7 +188,7 @@ object LogProcessor extends MessageProcessor {
             case v => v
           }
           (key, value)
-      }.collect { case (k: String, v: String) => s"$k=$v" }.toSeq
+      }.collect { case (k: String, v: String) => HeaderField(k, v) }.toSeq
       case _ => Seq.empty
     }
     (payload, fields)
@@ -219,10 +219,10 @@ object LogProcessor extends MessageProcessor {
       sourceName = findSourceName(logEvent, endpoint),
       sourceCategory = findSourceCategory(logEvent, endpoint),
       sourceHost = "",
-      fields = Seq(s"container=${logEvent.metadata.container}",
-        s"node=${logEvent.metadata.nodeName}",
-        s"pod=${logEvent.metadata.name}",
-        s"namespace=${logEvent.metadata.namespace}"),
+      fields = Seq(HeaderField("container", logEvent.metadata.container),
+        HeaderField("node", logEvent.metadata.nodeName),
+        HeaderField("pod", logEvent.metadata.name),
+        HeaderField("namespace", logEvent.metadata.namespace)),
       endpoint = config.sumoEndpoints(endpointName).uri,
       logs = Seq(LogRequest(logEvent.timestamp.getOrElse(Instant.now().toEpochMilli), logEvent.message)))
 

@@ -1,7 +1,7 @@
 package com.sumologic.sumopush
 
 import com.sumologic.sumopush.actor.LogProcessor
-import com.sumologic.sumopush.model.{LogRequest, SumoDataType}
+import com.sumologic.sumopush.model.{HeaderField, LogRequest, SumoDataType}
 import com.typesafe.config.ConfigFactory
 import org.mockito.ArgumentMatchers
 import org.mockito.{Mockito => M}
@@ -13,15 +13,18 @@ class JsonLogTest extends BaseTest with MockitoSugar {
   private val withFallback = ConfigFactory.load("test-fallback")
   private val withoutFallback = ConfigFactory.load("test-nofallback")
   private val withFieldTypes = ConfigFactory.load("test-field-types")
+  private val withFieldInvalidChars = ConfigFactory.load("test-field-invalid-characters")
   private val cfgWithFallback = AppConfig(SumoDataType.logs, withFallback)
   private val cfgWithoutFallback = AppConfig(SumoDataType.logs, withoutFallback)
   private val cfgFieldTypes = AppConfig(SumoDataType.logs, withFieldTypes)
+  private val cfgFieldInvalidChars = AppConfig(SumoDataType.logs, withFieldInvalidChars)
 
   private val missingCategoryMsg = Utils.jsonLogEventFromResource("missingCategory.json")
   private val missingNameMsg = Utils.jsonLogEventFromResource("missingName.json")
   private val missingPayloadMsg = Utils.jsonLogEventFromResource("missingPayload.json")
   private val missingFieldMsg = Utils.jsonLogEventFromResource("missingField.json")
   private val fieldsTypesMsg = Utils.jsonLogEventFromResource("fieldsTypes.json")
+  private val fieldsWithInvalidCharactersMsg = Utils.jsonLogEventFromResource("fieldsWithInvalidCharacters.json")
 
   "LogProcessor" should "fallback to topic for missing source category or name" in {
     val logger = NOPLogger.NOP_LOGGER
@@ -58,7 +61,8 @@ class JsonLogTest extends BaseTest with MockitoSugar {
     val logger = NOPLogger.NOP_LOGGER
     val logFallback = LogProcessor.createSumoRequestsFromLogEvent(cfgWithFallback, "topic", missingFieldMsg, logger)
     logFallback.size shouldBe 1
-    logFallback.head.fields shouldBe Seq("existingField=fieldValue")
+    logFallback.head.fields shouldBe Seq(HeaderField("existingField", "fieldValue"))
+    logFallback.head.fields.head.toHeaderPart shouldBe "existingField=fieldValue"
   }
 
   "LogProcessor" should "extract fields with various types" in {
@@ -66,10 +70,26 @@ class JsonLogTest extends BaseTest with MockitoSugar {
     val logFallback = LogProcessor.createSumoRequestsFromLogEvent(cfgFieldTypes, "topic", fieldsTypesMsg, logger)
     logFallback.size shouldBe 1
     logFallback.head.fields should contain theSameElementsAs Seq(
+      HeaderField("stringfield", "stringvalue"),
+      HeaderField("intfield", "100"),
+      HeaderField("bigintfield", "228930314431312345"),
+      HeaderField("boolfield", "true"),
+    )
+    logFallback.head.fields.map(_.toHeaderPart) should contain theSameElementsAs Seq(
       "stringfield=stringvalue",
       "intfield=100",
       "bigintfield=228930314431312345",
       "boolfield=true",
     )
+  }
+
+  "LogProcessor" should "make sure fields do not contain invalid characters" in {
+    val logger = NOPLogger.NOP_LOGGER
+    val logFallback = LogProcessor.createSumoRequestsFromLogEvent(cfgFieldInvalidChars, "topic", fieldsWithInvalidCharactersMsg, logger)
+    logFallback.size shouldBe 1
+    logFallback.head.fields should contain theSameElementsAs Seq(
+      HeaderField("stringfield", "stringvalue"),
+    )
+    logFallback.head.fields.head.toHeaderPart shouldBe "stringfield=stringvalue"
   }
 }

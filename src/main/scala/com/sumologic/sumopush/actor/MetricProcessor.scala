@@ -51,7 +51,7 @@ object MetricProcessor extends MessageProcessor {
       sourceName = endpoint.sourceName.getOrElse(endpointName),
       sourceCategory = endpoint.sourceCategory.getOrElse(s"${config.cluster}/$endpointName"),
       sourceHost = "",
-      fields = Seq.empty[String],
+      fields = Seq.empty,
       endpoint = endpoint.uri,
       logs = Seq(MetricRequest(promMetricEvent.convertToLogLine(config))))
   }

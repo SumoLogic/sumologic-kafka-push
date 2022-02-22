@@ -53,41 +53,41 @@ Then reference the file `/opt/ssl/truststore.jks` file in your endpoints secret 
 ## Values
 The `values.yaml` contains variables used to configure a deployment of this chart.
 
-| Name | Description      | Default  |
-|------|------------------|----------|
-| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:0.3.10 |
-| metricsPort | The port to expose prometheus metrics on | 8080 |
-| logLevel | Logging level | warn |
-| replicas | Desired replica count to deploy | 1 |
-| dataType | Data type to process (logs or metrics) | logs |
-| groupedSize | Message batch size to use for sending data | 30000 |
-| groupedDuration | Batch timeout if `groupedSize` is not hit | 1s |
-| endpointsSecret | Secret to mount containing endpoint and additional configuration | null |
-| extraEnvVars | Extra environment variables to set in the push container | [] |
-| extraVolumes | Extra volumes to mount in the push container | [] |
-| extraVolumeMounts | Extra volume mounts in the push container | [] |
-| cluster | Cluster metadata to attach to metrics | null |
-| logs.uri | Sumo logic api uri for logs (required if using default endpoint config and logs data type) | null |
-| metrics.uri | Sumo logic api uri for metrics (required if using default endpoint config and metrics data type) | null |
-| kafka.bootstrapServers | Bootstrap server kafka configuration | localhost:9092 |
-| kafka.serdeClass | Serde class for deserializing messages from kafka topic | default serde |
-| kafka.topic | Kafka topic to read messages from | kafka-push-logs |
-| kafka.consumerGroup | Kafka consumer group | kafka-push-logs |
-| autoscale.type | Pod autoscaling mechanism (hpa or keda) | hpa |
-| autoscale.minReplicaCount | Minimum replica count | 1 |
-| autoscale.maxReplicaCount | Maximum replica count | 8 |
-| autoscale.keda.ratePerSecond | Keda rate per second | 9000 |
-| autoscale.keda.cooldownPeriod | Keda cooldown period | 1200 |
-| autoscale.keda.pollingInterval | Metric polling interval in seconds | 30 |
-| autoscale.keda.lagThreshold | Lag threshold to scale on | 90 |
-| autoscale.keda.prometheus | Prometheus endpoint to scrape metrics from | http://localhost:9090 |
-| autoscale.hpa.cpuThreshold | CPU threshold to scale on | 90 |
-| resources.limits.cpu | CPU limit | 2 |
-| resources.limits.memory | Memory limit | 2Gi |
-| resources.requests.cpu | CPU request | 1 |
-| resources.requests.memory | Memory request | 512Mi |
-| servicemonitor.enabled | Deploy a servicemonitor for scraping metrics | true |
-| servicemonitor.labels | Labels to append to servicemonitor for scraping metrics | {} |
+| Name | Description      | Default                                              |
+|------|------------------|------------------------------------------------------|
+| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:0.3.11 |
+| metricsPort | The port to expose prometheus metrics on | 8080                                                 |
+| logLevel | Logging level | warn                                                 |
+| replicas | Desired replica count to deploy | 1                                                    |
+| dataType | Data type to process (logs or metrics) | logs                                                 |
+| groupedSize | Message batch size to use for sending data | 30000                                                |
+| groupedDuration | Batch timeout if `groupedSize` is not hit | 1s                                                   |
+| endpointsSecret | Secret to mount containing endpoint and additional configuration | null                                                 |
+| extraEnvVars | Extra environment variables to set in the push container | []                                                   |
+| extraVolumes | Extra volumes to mount in the push container | []                                                   |
+| extraVolumeMounts | Extra volume mounts in the push container | []                                                   |
+| cluster | Cluster metadata to attach to metrics | null                                                 |
+| logs.uri | Sumo logic api uri for logs (required if using default endpoint config and logs data type) | null                                                 |
+| metrics.uri | Sumo logic api uri for metrics (required if using default endpoint config and metrics data type) | null                                                 |
+| kafka.bootstrapServers | Bootstrap server kafka configuration | localhost:9092                                       |
+| kafka.serdeClass | Serde class for deserializing messages from kafka topic | default serde                                        |
+| kafka.topic | Kafka topic to read messages from | kafka-push-logs                                      |
+| kafka.consumerGroup | Kafka consumer group | kafka-push-logs                                      |
+| autoscale.type | Pod autoscaling mechanism (hpa or keda) | hpa                                                  |
+| autoscale.minReplicaCount | Minimum replica count | 1                                                    |
+| autoscale.maxReplicaCount | Maximum replica count | 8                                                    |
+| autoscale.keda.ratePerSecond | Keda rate per second | 9000                                                 |
+| autoscale.keda.cooldownPeriod | Keda cooldown period | 1200                                                 |
+| autoscale.keda.pollingInterval | Metric polling interval in seconds | 30                                                   |
+| autoscale.keda.lagThreshold | Lag threshold to scale on | 90                                                   |
+| autoscale.keda.prometheus | Prometheus endpoint to scrape metrics from | http://localhost:9090                                |
+| autoscale.hpa.cpuThreshold | CPU threshold to scale on | 90                                                   |
+| resources.limits.cpu | CPU limit | 2                                                    |
+| resources.limits.memory | Memory limit | 2Gi                                                  |
+| resources.requests.cpu | CPU request | 1                                                    |
+| resources.requests.memory | Memory request | 512Mi                                                |
+| servicemonitor.enabled | Deploy a servicemonitor for scraping metrics | true                                                 |
+| servicemonitor.labels | Labels to append to servicemonitor for scraping metrics | {}                                                   |
 
 ## For Developers
 #### Publish Chart

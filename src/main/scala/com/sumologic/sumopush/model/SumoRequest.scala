@@ -22,8 +22,20 @@ case class SumoRequest(key: SumoKey,
                        sourceName: String,
                        sourceCategory: String,
                        sourceHost: String,
-                       fields: Seq[String],
+                       fields: Seq[HeaderField],
                        logs: Seq[LogRecord])
+
+case class HeaderField private(key: String, value: String) {
+  def toHeaderPart = s"$key=$value"
+}
+object HeaderField {
+  def apply(key: String, value: String): HeaderField = {
+    new HeaderField(
+      key.replace(",", "").replace("=", ""),
+      value.replace(",", "").replace("=", ""),
+    )
+  }
+}
 
 sealed trait SumoKey {
   val value: String
