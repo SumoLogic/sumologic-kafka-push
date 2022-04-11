@@ -23,6 +23,7 @@ class JsonLogTest extends BaseTest with MockitoSugar {
   private val missingNameMsg = Utils.jsonLogEventFromResource("missingName.json")
   private val missingPayloadMsg = Utils.jsonLogEventFromResource("missingPayload.json")
   private val missingFieldMsg = Utils.jsonLogEventFromResource("missingField.json")
+  private val badPayloadArrayMsg = Utils.jsonLogEventFromResource("badPayloadArray.json")
   private val fieldsTypesMsg = Utils.jsonLogEventFromResource("fieldsTypes.json")
   private val fieldsWithInvalidCharactersMsg = Utils.jsonLogEventFromResource("fieldsWithInvalidCharacters.json")
 
@@ -63,6 +64,15 @@ class JsonLogTest extends BaseTest with MockitoSugar {
     logFallback.size shouldBe 1
     logFallback.head.fields shouldBe Seq(HeaderField("existingField", "fieldValue"))
     logFallback.head.fields.head.toHeaderPart shouldBe "existingField=fieldValue"
+  }
+
+  "LogProcessor" should "forward full message if payload is an empty array" in {
+    val logger = NOPLogger.NOP_LOGGER
+    val logFallback = LogProcessor.createSumoRequestsFromLogEvent(cfgFieldTypes, "topic", badPayloadArrayMsg, logger)
+    logFallback.size shouldBe 1
+    logFallback.head.logs.head should matchPattern {
+      case LogRequest(_, """{"log":{"log":[]},"category":{"source":"sourceCategory"},"name":{"source":"sourceName"},"additionalFields":{"string":"stringvalue","null":null,"bool":true,"int":100,"bigint":228930314431312345}}""") =>
+    }
   }
 
   "LogProcessor" should "extract fields with various types" in {

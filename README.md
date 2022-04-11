@@ -5,7 +5,7 @@ A containerized application for scalable, high-performance log and metric ingest
 from Kafka. May either be run in Kubernetes or Docker environments.
 
 ## Installation
-The latest sumologic-kafka-push docker image is hosted in our public repository at `public.ecr.aws/sumologic/sumologic-kafka-push:0.3.11`
+The latest sumologic-kafka-push docker image is hosted in our public repository at `public.ecr.aws/sumologic/sumologic-kafka-push:0.3.12`
 ### Docker
 A docker compose file is available on request.
 ### Kubernetes
@@ -143,23 +143,17 @@ Any override settings can be applied on a per-container basis by appending `.<co
 | sumologic.com/sourceName | Source name override |
 
 ## For developers
-### Publish docker image
-#### Refresh Docker Login
-Need docker and credentials to access the account containing the public.ecr.aws/sumologic repository.
-
-First login to the ECR repository:
-`aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/sumologic`
-
-#### Publish Base Image (if necessary)
-```
-cd docker/
-docker build -t sumologic-kafka-push:focal-corretto-11
-docker tag sumologic-kafka-push:focal-corretto-11 public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11
-docker push public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11
-```
-#### Local Publish
-Update `version.sbt` and README docs with latest version.
-```
-sbt docker:publishLocal
-docker push public.ecr.aws/sumologic/sumologic-kafka-push:<latest version>
-```
+First ensure docker and git are installed and configured and you have credentials to access the account containing the
+public.ecr.aws/sumologic repository.
+### Update Version
+Update the sumologic-kafka-push application version by executing `make version RELEASE_VERSION=<new-version>`.
+### Build Base Image
+This is only necessary if the focal-corretto-11 base image hasn't been published to the public.ecr.aws/sumologic repository yet.  To build the base image, run
+`make build-base`.
+### Publish Base Image
+This is only necessary if the focal-corretto-11 base image hasn't been published to the public.ecr.aws/sumologic repository yet.  To publish the base image, run
+`make publish-base`.
+### Build Docker Image
+After updating the application version, build a new image by executing `make build-docker`.
+### Publish Docker Image
+After building a new docker image, publish it to the public.ecr.aws/sumologic repository by execting `make publish-docker`.

@@ -11,7 +11,8 @@ Once Helm is set up properly, add the repo as follows:
 ```
 helm repo add sumologic-kafka-push https://sumologic.github.io/sumologic-kafka-push
 ```
-You can then run `helm search repo sumologic-kafka-push` to see the charts.
+You can then run `helm search repo sumologic-kafka-push` to see the charts. The latest is
+`sumologic-kafka-push/kafka-push:0.2.5`
 
 ## Configuration
 This chart supports common application configurations via the values settings. If additional
@@ -55,7 +56,7 @@ The `values.yaml` contains variables used to configure a deployment of this char
 
 | Name | Description      | Default                                              |
 |------|------------------|------------------------------------------------------|
-| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:0.3.11 |
+| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:0.3.12 |
 | metricsPort | The port to expose prometheus metrics on | 8080                                                 |
 | logLevel | Logging level | warn                                                 |
 | replicas | Desired replica count to deploy | 1                                                    |
@@ -90,13 +91,10 @@ The `values.yaml` contains variables used to configure a deployment of this char
 | servicemonitor.labels | Labels to append to servicemonitor for scraping metrics | {}                                                   |
 
 ## For Developers
+### Lint Chart
+It is always recommended to lint the chart before publishing using `make chart-lint`
+### Update Chart Version
+Publish a new chart version with `make chart-version CHART_VERSION=<new-version>`
 #### Publish Chart
-To publish a new chart, first ensure the main branch has the latest changes and Chart.yaml has been updated with the new
-version/appVersion.
-```
-git checkout main && git pull && git checkout gh-pages && git rebase main
-cd docs/
-helm package ../helm
-helm repo index . --merge index.yaml --url https://sumologic.github.io/sumologic-kafka-push/
-git add . && git commit -m "Publish helm chart 0.x.x" && git push --force
-```
+To publish a new chart, first ensure Chart.yaml has been updated with the new version/appVersion (run `make version`
+and `make chart-version`) and the changes have been published to the main branch. Then run `make chart-publish`.

@@ -13,6 +13,7 @@ import com.sumologic.sumopush.model._
 import io.prometheus.client.Counter
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.json4s.JsonAST.{JArray, JObject}
+import org.json4s.native.JsonMethods.{compact, render}
 import org.json4s.native.{JsonMethods, Serialization}
 import org.json4s.{DefaultFormats, Formats, JNothing, JValue, JsonAST}
 import org.slf4j.{Logger, LoggerFactory}
@@ -121,9 +122,9 @@ object LogProcessor extends MessageProcessor {
       case (Some(cat), Some(name)) =>
         (logEvent.message match {
           case ja: JArray =>
-            ja.arr.map(jv => findPayloadAndFields(jv, jsonOptions, wrapperKey))
+            ja.arr.map(jv => findPayloadAndFields(jv, jsonOptions, wrapperKey, logger))
           case jv: JValue =>
-            List(findPayloadAndFields(jv, jsonOptions, wrapperKey))
+            List(findPayloadAndFields(jv, jsonOptions, wrapperKey, logger))
         }).map {
           case (payload, fields) =>
             val request = payload match {
@@ -148,17 +149,23 @@ object LogProcessor extends MessageProcessor {
     }
   }
 
-  def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean), key: Option[String]): (Any, Seq[HeaderField]) = {
+  def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean), key: Option[String], logger: Logger): (Any, Seq[HeaderField]) = {
     implicit val formats: Formats = DefaultFormats
     val payload = (jsonOptions match {
       case (_, Some(jp), text) =>
         val value = jp.read(json).asInstanceOf[Any] match {
           case s: String => s
           case m: Map[_, _] => m.asInstanceOf[Map[String, Any]]
-          case ja: JArray => ja.arr.head match {
-            case _: JObject => ja.extract[List[Map[String, Any]]]
-            case _ => ja.extract[List[Any]]
-          }
+          case ja: JArray =>
+            if (ja.arr.isEmpty) {
+              logger.warn(s"Unable to extract payload from empty array field: ${compact(render(json))}")
+              json.extract[Map[String, Any]]
+            } else {
+              ja.arr.head match {
+                case _: JObject => ja.extract[List[Map[String, Any]]]
+                case _ => ja.extract[List[Any]]
+              }
+            }
           case jo: JObject => jo.extract[Map[String, Any]]
           case _ => json.extract[Map[String, Any]]
         }
