@@ -77,9 +77,8 @@ chart-version:
 chart-publish: CHART_VERSION = $(shell grep -oE "[0-9]+\.[0-9]+\.[0-9]+" helm/Chart.yaml | head -1)
 chart-publish:
 	@git checkout main && git pull && git checkout gh-pages && git rebase main
-	@cd docs/
-	@CMD="package ../helm" $(MAKE) helm
-	@CMD="repo index . --merge index.yaml --url https://sumologic.github.io/sumologic-kafka-push/" $(MAKE) helm
+	@CMD="package helm/ -d docs/" $(MAKE) helm
+	@CMD="repo index /docs --merge index.yaml --url https://sumologic.github.io/sumologic-kafka-push/" $(MAKE) helm
 	@git add . && git commit -m "Publish helm chart $(CHART_VERSION)" && git push
-	@git checkout main && cd ../
+	@git checkout main
 	@echo "Published helm chart $(CHART_VERSION)"
