@@ -59,36 +59,42 @@ object LogProcessor extends MessageProcessor {
     Behaviors.receiveMessage[LogMessage[_]] {
       case ConsumerLogMessage(record, offset, replyTo) =>
         context.system.log.trace("log key: {}", record.key())
-        val reply = record.value() match {
-          case Success(_@JsonLogEvent(JNothing)) =>
-            context.log.warn("ignoring empty message")
+        val reply =  try {
+          record.value() match {
+            case Success(_@JsonLogEvent(JNothing)) =>
+              context.log.warn("ignoring empty message")
+              (None, offset)
+            case null =>
+              context.log.warn("ignoring null message")
+              (None, offset)
+            case Success(log@JsonLogEvent(_)) =>
+              val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
+              if (requests.isEmpty) (None, offset)
+              else {
+                requests.foreach(request => stats.messagesProcessed.labels(request.key.value, request.endpointName).inc())
+                (Some(requests), offset)
+              }
+            case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
+              val req = if (findContainerExclusion(log)) {
+                stats.messagesIgnored.labels(metadata.container).inc()
+                None
+              } else {
+                val requests = createSumoRequestsFromLogEvent(config, log)
+                requests.foreach(request => stats.messagesProcessed.labels(log.metadata.container, request.endpointName).inc())
+                Some(requests)
+              }
+              (req, offset)
+            case Failure(e) =>
+              val exName = e.toString.split(":")(0)
+              messages_failed.labels(exName).inc()
+              context.log.error("unable to parse log message {}", e.getMessage, e)
+              (None, offset)
+            case ev => throw new UnsupportedOperationException(s"unknown LogEvent type: $ev")
+          }
+        } catch {
+          case e: Exception =>
+            context.log.error("Error in Log Processor {}, skipping message", e.getMessage, e)
             (None, offset)
-          case null =>
-            context.log.warn("ignoring null message")
-            (None, offset)
-          case Success(log@JsonLogEvent(_)) =>
-            val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
-            if (requests.isEmpty) (None, offset)
-            else {
-              requests.foreach(request => stats.messagesProcessed.labels(request.key.value, request.endpointName).inc())
-              (Some(requests), offset)
-            }
-          case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
-            val req = if (findContainerExclusion(log)) {
-              stats.messagesIgnored.labels(metadata.container).inc()
-              None
-            } else {
-              val requests = createSumoRequestsFromLogEvent(config, log)
-              requests.foreach(request => stats.messagesProcessed.labels(log.metadata.container, request.endpointName).inc())
-              Some(requests)
-            }
-            (req, offset)
-          case Failure(e) =>
-            val exName = e.toString.split(":")(0)
-            messages_failed.labels(exName).inc()
-            context.log.error("unable to parse log message {}", e.getMessage, e)
-            (None, offset)
-          case ev => throw new UnsupportedOperationException(s"unknown LogEvent type: $ev")
         }
         replyTo ! reply
         Behaviors.same
