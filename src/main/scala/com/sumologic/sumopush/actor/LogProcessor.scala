@@ -1,6 +1,6 @@
 package com.sumologic.sumopush.actor
 
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, Terminated}
 import akka.kafka.ConsumerMessage.CommittableOffset
 import com.google.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
@@ -59,41 +59,10 @@ object LogProcessor extends MessageProcessor {
     Behaviors.receiveMessage[LogMessage[_]] {
       case ConsumerLogMessage(record, offset, replyTo) =>
         context.system.log.trace("log key: {}", record.key())
-        val reply =  try {
-          record.value() match {
-            case Success(_@JsonLogEvent(JNothing)) =>
-              context.log.warn("ignoring empty message")
-              (None, offset)
-            case null =>
-              context.log.warn("ignoring null message")
-              (None, offset)
-            case Success(log@JsonLogEvent(_)) =>
-              val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
-              if (requests.isEmpty) (None, offset)
-              else {
-                requests.foreach(request => stats.messagesProcessed.labels(request.key.value, request.endpointName).inc())
-                (Some(requests), offset)
-              }
-            case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
-              val req = if (findContainerExclusion(log)) {
-                stats.messagesIgnored.labels(metadata.container).inc()
-                None
-              } else {
-                val requests = createSumoRequestsFromLogEvent(config, log)
-                requests.foreach(request => stats.messagesProcessed.labels(log.metadata.container, request.endpointName).inc())
-                Some(requests)
-              }
-              (req, offset)
-            case Failure(e) =>
-              val exName = e.toString.split(":")(0)
-              messages_failed.labels(exName).inc()
-              context.log.error("unable to parse log message {}", e.getMessage, e)
-              (None, offset)
-            case ev => throw new UnsupportedOperationException(s"unknown LogEvent type: $ev")
-          }
-        } catch {
-          case e: Exception =>
-            context.log.error("Error in Log Processor {}, skipping message", e.getMessage, e)
+        val reply = processLogMessage(config, stats, context, record) match {
+          case Success(request) => (request, offset)
+          case Failure(e) =>
+            parseAndLogException(context, e, "Error in Log Processor, skipping message")
             (None, offset)
         }
         replyTo ! reply
@@ -105,6 +74,44 @@ object LogProcessor extends MessageProcessor {
           () => context.log.info("Processor stopped")
         }
     }
+  }
+
+  private def parseAndLogException(context: ActorContext[LogMessage[_]], e: Throwable, message: String): Unit = {
+    val exName = e.toString.split(":")(0)
+    messages_failed.labels(exName).inc()
+    context.log.error(s"$message {}", e.getMessage, e)
+  }
+
+  private def processLogMessage(config: AppConfig, stats: Stats,
+                                context: ActorContext[LogMessage[_]],
+                                record: ConsumerRecord[Any, Try[LogEvent[Any]]]): Try[Option[Seq[SumoRequest]]] = {
+    Try(record.value() match {
+      case Success(_@JsonLogEvent(JNothing)) =>
+        context.log.warn("ignoring empty message")
+        None
+      case null =>
+        context.log.warn("ignoring null message")
+        None
+      case Success(log@JsonLogEvent(_)) =>
+        val requests = createSumoRequestsFromLogEvent(config, record.topic(), log, context.log)
+        if (requests.isEmpty) None
+        else {
+          requests.foreach(request => stats.messagesProcessed.labels(request.key.value, request.endpointName).inc())
+          Some(requests)
+        }
+      case Success(log@KubernetesLogEvent(_, _, _, metadata)) =>
+        val req = if (findContainerExclusion(log)) {
+          stats.messagesIgnored.labels(metadata.container).inc()
+          None
+        } else {
+          val requests = createSumoRequestsFromLogEvent(config, log)
+          requests.foreach(request => stats.messagesProcessed.labels(log.metadata.container, request.endpointName).inc())
+          Some(requests)
+        }
+        req
+      case Failure(e) => throw e
+      case ev => throw new UnsupportedOperationException(s"unknown LogEvent type: $ev")
+    })
   }
 
   def createSumoRequestsFromLogEvent(config: AppConfig, topic: String, logEvent: JsonLogEvent, logger: Logger): Seq[SumoRequest] = {
