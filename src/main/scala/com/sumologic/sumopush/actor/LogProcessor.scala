@@ -82,9 +82,9 @@ object LogProcessor extends MessageProcessor {
     context.log.error(s"$message {}", e.getMessage, e)
   }
 
-  private def processLogMessage(config: AppConfig, stats: Stats,
+  private def processLogMessage[K](config: AppConfig, stats: Stats,
                                 context: ActorContext[LogMessage[_]],
-                                record: ConsumerRecord[Any, Try[LogEvent[Any]]]): Try[Option[Seq[SumoRequest]]] = {
+                                record: ConsumerRecord[K, Try[LogEvent[Any]]]): Try[Option[Seq[SumoRequest]]] = {
     Try(record.value() match {
       case Success(_@JsonLogEvent(JNothing)) =>
         context.log.warn("ignoring empty message")
