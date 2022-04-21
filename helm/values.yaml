@@ -1,5 +1,5 @@
 ---
-image: public.ecr.aws/sumologic/sumologic-kafka-push:0.3.12
+image: public.ecr.aws/sumologic/sumologic-kafka-push:0.3.13
 metricsPort: 8080
 logLevel: warn
 

@@ -12,7 +12,7 @@ Once Helm is set up properly, add the repo as follows:
 helm repo add sumologic-kafka-push https://sumologic.github.io/sumologic-kafka-push
 ```
 You can then run `helm search repo sumologic-kafka-push` to see the charts. The latest is
-`sumologic-kafka-push/kafka-push:0.2.5`
+`sumologic-kafka-push/kafka-push:0.3.13`
 
 ## Configuration
 This chart supports common application configurations via the values settings. If additional
@@ -56,7 +56,7 @@ The `values.yaml` contains variables used to configure a deployment of this char
 
 | Name | Description      | Default                                              |
 |------|------------------|------------------------------------------------------|
-| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:0.3.12 |
+| image | The docker image to use | public.ecr.aws/sumologic/sumologic-kafka-push:0.3.13 |
 | metricsPort | The port to expose prometheus metrics on | 8080                                                 |
 | logLevel | Logging level | warn                                                 |
 | replicas | Desired replica count to deploy | 1                                                    |
