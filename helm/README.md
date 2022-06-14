@@ -52,7 +52,7 @@ Extra volumes may be specified using `extraVolumes/extraVolumeMounts`. May be us
  files stored in a secret.
 
 #### Example
-To create secret: `kubectl create secret generic ssl-truststore --from-file=kafka.truststore.jks --from-file=client.truststore.jks`
+To create secret: `kubectl create secret generic ssl-truststore --from-file=kafka.truststore.jks --from-file=client.keystore.jks`
 Values snippet:
 ```
 extraVolumes:
