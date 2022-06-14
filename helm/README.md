@@ -21,6 +21,22 @@ configuration settings are needed this may be accomplished via mounting a secret
 [application.conf](https://github.com/SumoLogic/sumologic-kafka-push/blob/main/src/main/resources/application.conf).
 This is particularly useful when configuring multiple endpoints or kafka consumer settings.
 
+## SSL Configuration
+Example SSL configuration (to be used with the Extra Volumes example below):
+```
+akka: {
+  kafka.consumer: {
+    security.protocol: SSL
+    ssl.truststore.location: /opt/ssl/kafka.truststore.jks
+    ssl.truststore.password: trustore_password
+    ssl.keystore.location: /opt/ssl/client.keystore.jks
+    ssl.keystore.password: keystore_password
+    ssl.key.password: key_password
+    ssl.enabled.protocols: TLSv1.2,TLSv1.1,TLSv1
+    ssl.client.auth: required
+  }
+}
+```
 ## Autoscaling
 This chart supports autoscaling based cpu (hpa) or based on kafka lag metrics in
 prometheus (keda). The default autoscaling is configured based on the resources cpu request/limit
@@ -35,8 +51,8 @@ and [kafka lag exporter](https://github.com/lightbend/kafka-lag-exporter).
 Extra volumes may be specified using `extraVolumes/extraVolumeMounts`. May be used to mount binary truststore/certstore
  files stored in a secret.
 
-####Example
-To create secret: `kubectl create secret generic ssl-truststore --from-file=truststore.jks`
+#### Example
+To create secret: `kubectl create secret generic ssl-truststore --from-file=kafka.truststore.jks --from-file=client.truststore.jks`
 Values snippet:
 ```
 extraVolumes:
