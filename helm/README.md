@@ -21,19 +21,57 @@ configuration settings are needed this may be accomplished via mounting a secret
 [application.conf](https://github.com/SumoLogic/sumologic-kafka-push/blob/main/src/main/resources/application.conf).
 This is particularly useful when configuring multiple endpoints or kafka consumer settings.
 
-## SSL Configuration
-Example SSL configuration (to be used with the Extra Volumes example below):
+To create the secret, create a file called `application.conf` which contains the desired settings. For example:
 ```
-akka: {
-  kafka.consumer: {
-    security.protocol: SSL
-    ssl.truststore.location: /opt/ssl/kafka.truststore.jks
-    ssl.truststore.password: trustore_password
-    ssl.keystore.location: /opt/ssl/client.keystore.jks
-    ssl.keystore.password: keystore_password
-    ssl.key.password: key_password
-    ssl.enabled.protocols: TLSv1.2,TLSv1.1,TLSv1
-    ssl.client.auth: required
+{
+  endpoints: {
+    logs: {
+      default: true
+      uri: "<ingestion uri>"
+      jsonOptions: {
+        payloadJsonPath: "$.message"
+      }
+    }
+    logs2: {
+      uri: "<ingestion uri2>"
+      namespaces: ["foo", "bar"]
+      sourceName: "logs2"
+      sourceCategory: "weblogs"
+      jsonOptions: {
+        payloadJsonPath: "$.message"
+      }
+    }
+  }
+}
+```
+Then run the following:
+```
+kubectl -n <namespace> create secret generic myconfig --from-file=application.conf
+```
+Then add the following line to values.yaml:
+```
+endpointsSecret: myconfig
+```
+
+## SSL Configuration
+Additional kafka client configuration or SSL configuration can be setup by merging a configuration like the following
+with the rest of the settings in the file (this example could be used with the Extra Volumes example below since the
+location paths match the volume mountpoint):
+```
+{
+  akka: {
+    kafka.consumer: {
+      kafka-clients: {
+        security.protocol: "SSL"
+        ssl.truststore.location: "/opt/ssl/kafka.truststore.jks"
+        ssl.truststore.password: "trustore_password"
+        ssl.keystore.location: "/opt/ssl/client.keystore.jks"
+        ssl.keystore.password: "keystore_password"
+        ssl.key.password: "key_password"
+        ssl.enabled.protocols: "TLSv1.2,TLSv1.1,TLSv1"
+        ssl.client.auth: "required"
+      }
+    }
   }
 }
 ```
@@ -52,7 +90,10 @@ Extra volumes may be specified using `extraVolumes/extraVolumeMounts`. May be us
  files stored in a secret.
 
 #### Example
-To create secret: `kubectl create secret generic ssl-truststore --from-file=kafka.truststore.jks --from-file=client.keystore.jks`
+To create secret:
+```
+kubectl create secret generic ssl-truststore --from-file=kafka.truststore.jks --from-file=client.keystore.jks`
+```
 Values snippet:
 ```
 extraVolumes:
