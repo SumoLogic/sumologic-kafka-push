@@ -53,7 +53,7 @@ Then add the following line to values.yaml:
 endpointsSecret: myconfig
 ```
 
-## SSL Configuration
+### SSL Configuration
 Additional kafka client configuration or SSL configuration can be setup by merging a configuration like the following
 with the rest of the settings in the file (this example could be used with the Extra Volumes example below since the
 location paths match the volume mountpoint):
@@ -74,6 +74,26 @@ location paths match the volume mountpoint):
     }
   }
 }
+```
+### Configuration Troubleshooting
+Changes to the configuration require a pod restart. To restart a pod, delete it and kubernetes will start a new one:
+```
+kubectl -n <namespace> delete po <pod name>
+```
+Then verify that kafka client configuration settings are being loaded up by comparing the output from the log when kafka-push
+first starts with the settings in the `application.conf` config file.
+First get the list of pods:
+```
+kubectl -n <namespace> get po
+```
+Then access the pod logs:
+```
+kubectl -n <namespace> logs <pod name>
+```
+
+You may also try to view the contents of the config file mounted in the pod using the following command:
+```
+kubectl -n <namespace> exec -t <pod name> -- cat /opt/docker/conf/application.conf
 ```
 ## Autoscaling
 This chart supports autoscaling based cpu (hpa) or based on kafka lag metrics in
