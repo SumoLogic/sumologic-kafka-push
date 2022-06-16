@@ -21,6 +21,80 @@ configuration settings are needed this may be accomplished via mounting a secret
 [application.conf](https://github.com/SumoLogic/sumologic-kafka-push/blob/main/src/main/resources/application.conf).
 This is particularly useful when configuring multiple endpoints or kafka consumer settings.
 
+To create the secret, create a file called `application.conf` which contains the desired settings. For example:
+```
+{
+  endpoints: {
+    logs: {
+      default: true
+      uri: "<ingestion uri>"
+      jsonOptions: {
+        payloadJsonPath: "$.message"
+      }
+    }
+    logs2: {
+      uri: "<ingestion uri2>"
+      namespaces: ["foo", "bar"]
+      sourceName: "logs2"
+      sourceCategory: "weblogs"
+      jsonOptions: {
+        payloadJsonPath: "$.message"
+      }
+    }
+  }
+}
+```
+Then run the following:
+```
+kubectl -n <namespace> create secret generic myconfig --from-file=application.conf
+```
+Then add the following line to values.yaml:
+```
+endpointsSecret: myconfig
+```
+
+### SSL Configuration
+Additional kafka client configuration or SSL configuration can be setup by merging a configuration like the following
+with the rest of the settings in the file (this example could be used with the Extra Volumes example below since the
+location paths match the volume mountpoint):
+```
+{
+  akka: {
+    kafka.consumer: {
+      kafka-clients: {
+        security.protocol: "SSL"
+        ssl.truststore.location: "/opt/ssl/kafka.truststore.jks"
+        ssl.truststore.password: "trustore_password"
+        ssl.keystore.location: "/opt/ssl/client.keystore.jks"
+        ssl.keystore.password: "keystore_password"
+        ssl.key.password: "key_password"
+        ssl.enabled.protocols: "TLSv1.2,TLSv1.1,TLSv1"
+        ssl.client.auth: "required"
+      }
+    }
+  }
+}
+```
+### Configuration Troubleshooting
+Changes to the configuration require a pod restart. To restart a pod, delete it and kubernetes will start a new one:
+```
+kubectl -n <namespace> delete po <pod name>
+```
+Then verify that kafka client configuration settings are being loaded up by comparing the output from the log when kafka-push
+first starts with the settings in the `application.conf` config file.
+First get the list of pods:
+```
+kubectl -n <namespace> get po
+```
+Then access the pod logs:
+```
+kubectl -n <namespace> logs <pod name>
+```
+
+You may also try to view the contents of the config file mounted in the pod using the following command:
+```
+kubectl -n <namespace> exec -t <pod name> -- cat /opt/docker/conf/application.conf
+```
 ## Autoscaling
 This chart supports autoscaling based cpu (hpa) or based on kafka lag metrics in
 prometheus (keda). The default autoscaling is configured based on the resources cpu request/limit
@@ -35,8 +109,11 @@ and [kafka lag exporter](https://github.com/lightbend/kafka-lag-exporter).
 Extra volumes may be specified using `extraVolumes/extraVolumeMounts`. May be used to mount binary truststore/certstore
  files stored in a secret.
 
-####Example
-To create secret: `kubectl create secret generic ssl-truststore --from-file=truststore.jks`
+#### Example
+To create secret:
+```
+kubectl create secret generic ssl-truststore --from-file=kafka.truststore.jks --from-file=client.keystore.jks`
+```
 Values snippet:
 ```
 extraVolumes:
