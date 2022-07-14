@@ -20,6 +20,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import scala.collection.immutable.Seq
 import scala.util.{Failure, Success, Try}
 
 object LogProcessor extends MessageProcessor {
@@ -145,7 +146,7 @@ object LogProcessor extends MessageProcessor {
               case map: Map[String, Any] => RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ map.toSeq).toMap)
             }
             SumoRequest(
-              key = DefaultLogKey(cat),
+              key = DefaultLogKey(cat + "-" + hashFields(fields)),
               dataType = SumoDataType.logs,
               format = format,
               endpointName = endpoint.name.getOrElse("default"),
@@ -160,6 +161,10 @@ object LogProcessor extends MessageProcessor {
         logger.warn(s"Unable to determine source category or name in the message: ${JsonMethods.compact(JsonMethods.render(logEvent.message))}")
         Nil
     }
+  }
+
+  def hashFields(fields: Seq[HeaderField]): String = {
+    Integer.toHexString(fields.sortBy(_.key).map(_.value).hashCode())
   }
 
   def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean), key: Option[String], logger: Logger): (Any, Seq[HeaderField]) = {
