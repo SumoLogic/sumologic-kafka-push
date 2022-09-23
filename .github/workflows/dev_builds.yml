@@ -1,0 +1,27 @@
+name: Dev builds
+
+on:
+  push:
+    branches:
+      - main
+      - 'release-v[0-9]+.[0-9]+'
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Extract tag
+        id: extract_tag
+        run: echo "::set-output name=tag::$(echo $(git describe --tags --always))"
+      - name: Print Tag
+        run: echo "Running dev build for  ${{ steps.extract_tag.outputs.tag }}"
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2.0.0
+        with:
+          registry: ghcr.io
+          username: USERNAME
+          password: ${{ secrets.CR_PAT }}
+      - name: Build and push docker image
+        run: make publish-docker-ghcr BUILD_TAG=${{ steps.extract_tag.outputs.tag }}
+  
