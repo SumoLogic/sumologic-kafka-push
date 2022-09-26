@@ -1,0 +1,17 @@
+{
+  "log": {
+    "log": {"timestamp": 1654016401446, "USER": "root", "PID": "3", "CPU": "0.0", "MEM": "0.0"}
+  },
+  "category": {
+    "source": "sourceCategory"
+  },
+  "name": {
+    "source": "sourceName"
+  },
+  "additionalFields": {
+    "string": "stringvalue",
+    "bool": true,
+    "int": 100,
+    "bigint": 228930314431312345
+  }
+}

@@ -14,10 +14,12 @@ class JsonLogTest extends BaseTest with MockitoSugar {
   private val withoutFallback = ConfigFactory.load("test-nofallback")
   private val withFieldTypes = ConfigFactory.load("test-field-types")
   private val withFieldInvalidChars = ConfigFactory.load("test-field-invalid-characters")
+  private val withFieldInPayload = ConfigFactory.load("test-fields-in-payload")
   private val cfgWithFallback = AppConfig(SumoDataType.logs, withFallback)
   private val cfgWithoutFallback = AppConfig(SumoDataType.logs, withoutFallback)
   private val cfgFieldTypes = AppConfig(SumoDataType.logs, withFieldTypes)
   private val cfgFieldInvalidChars = AppConfig(SumoDataType.logs, withFieldInvalidChars)
+  private val cfgFieldsInPayload = AppConfig(SumoDataType.logs, withFieldInPayload)
 
   private val missingCategoryMsg = Utils.jsonLogEventFromResource("missingCategory.json")
   private val missingNameMsg = Utils.jsonLogEventFromResource("missingName.json")
@@ -26,6 +28,7 @@ class JsonLogTest extends BaseTest with MockitoSugar {
   private val badPayloadArrayMsg = Utils.jsonLogEventFromResource("badPayloadArray.json")
   private val fieldsTypesMsg = Utils.jsonLogEventFromResource("fieldsTypes.json")
   private val fieldsWithInvalidCharactersMsg = Utils.jsonLogEventFromResource("fieldsWithInvalidCharacters.json")
+  private val jsonPayloadWithFieldsMsg = Utils.jsonLogEventFromResource("jsonPayloadWithFields.json")
 
   "LogProcessor" should "fallback to topic for missing source category or name" in {
     val logger = NOPLogger.NOP_LOGGER
@@ -101,5 +104,13 @@ class JsonLogTest extends BaseTest with MockitoSugar {
       HeaderField("stringfield", "stringvalue"),
     )
     logFallback.head.fields.head.toHeaderPart shouldBe "stringfield=stringvalue"
+  }
+
+  "LogProcessor" should "combine fields with log payload" in {
+    val logger = NOPLogger.NOP_LOGGER
+    val logFallback = LogProcessor.createSumoRequestsFromLogEvent(cfgFieldsInPayload, "topic", jsonPayloadWithFieldsMsg, logger)
+    logFallback.size shouldBe 1
+    logFallback.head.logs.head.log should be("{\"timestamp\":1654016401446,\"PID\":\"3\",\"USER\":\"root\",\"MEM\":\"0.0\",\"metadata\":{\"bigintfield\":\"228930314431312345\",\"boolfield\":\"true\",\"intfield\":\"100\",\"stringfield\":\"stringvalue\"},\"CPU\":\"0.0\"}")
+    logFallback.head.fields.size should be(0)
   }
 }
