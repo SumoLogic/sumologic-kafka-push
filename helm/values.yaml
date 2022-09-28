@@ -21,6 +21,8 @@ extraVolumes: []
 extraVolumeMounts: []
 
 extraEnvVars: []
+  
+extraTolerations: []
 
 servicemonitor:
   enabled: true

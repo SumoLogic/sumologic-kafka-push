@@ -144,6 +144,7 @@ The `values.yaml` contains variables used to configure a deployment of this char
 | extraEnvVars | Extra environment variables to set in the push container | []                                                   |
 | extraVolumes | Extra volumes to mount in the push container | []                                                   |
 | extraVolumeMounts | Extra volume mounts in the push container | []                                                   |
+| extraTolerations | Extra tolerations to be added for push pods | []                                                   |
 | cluster | Cluster metadata to attach to metrics | null                                                 |
 | logs.uri | Sumo logic api uri for logs (required if using default endpoint config and logs data type) | null                                                 |
 | metrics.uri | Sumo logic api uri for metrics (required if using default endpoint config and metrics data type) | null                                                 |

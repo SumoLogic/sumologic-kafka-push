@@ -91,11 +91,18 @@ spec:
       {{- if .Values.workerGroupSelector }}
       nodeSelector:
         sumologic.com/workerGroup: {{ .Values.workerGroupSelector }}
+      {{- end }}
+      {{- if or .Values.workerGroupSelector .Values.extraTolerations }}
       tolerations:
+      {{- if .Values.workerGroupSelector }}
         - key: "workerGroup"
           operator: "Equal"
           value: {{ .Values.workerGroupSelector }}
           effect: "NoSchedule"
+      {{- end }}
+      {{- if .Values.extraTolerations }}
+      {{- toYaml .Values.extraTolerations | nindent 8 }}
+      {{- end }}
       {{- end }}
       volumes:
       {{- if .Values.endpointsSecret }}
