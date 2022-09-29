@@ -34,48 +34,37 @@ version:
 	@sed -i '' -Ee "s/ThisBuild := \"[[:digit:].]+\"/ThisBuild := \"$(RELEASE_VERSION)\"/g" version.sbt
 	@echo "Version updated to $(RELEASE_VERSION)"
 
+# Setup Buildx (execute if building locally)
+.PHONY: setup-buildx
+setup-buildx:
+	@docker run --rm --privileged tonistiigi/binfmt --install all
+	@docker buildx create --driver-opt network=host --use --name multi-arch-builder
+
 # Login to ECR
 .PHONY: login-ecr
 login-ecr:
 	@echo "Logging into aws ecr repository"
 	@aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/sumologic
 
-# Build the base docker image
+# Build the base docker image (pre-requisite: setup-buildx)
 .PHONY: build-base
 build-base:
-	@docker build -t public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11 docker/
+	@docker buildx  build --platform linux/amd64,linux/arm64 -t public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11-multiarch --push docker/
 
-# Push the base docker image
-.PHONY: publish-base
-publish-base:
-	@docker push public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11
-
-# Build the base docker image GHCR
-.PHONY: build-base-ghcr
-build-base-ghcr:
-	@docker build -t ghcr.io/sumologic/sumologic-kafka-push:focal-corretto-11 docker/
-	@docker image tag public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11 ghcr.io/sumologic/sumologic-kafka-push:focal-corretto-11
-
-# Push the base docker image GHCR
-.PHONY: publish-base-ghcr
-publish-base-ghcr:
-	@docker push ghcr.io/sumologic/sumologic-kafka-push:focal-corretto-11
-
+# Build and push release image to ECR (pre-requisite: setup-buildx)
 .PHONY: publish-docker
 publish-docker:	RELEASE_VERSION = $(shell grep -oE "[0-9]+\.[0-9]+\.[0-9]+" version.sbt)
 publish-docker:
-	make build-base
-	@sbt docker:publishLocal
-	@docker push public.ecr.aws/sumologic/sumologic-kafka-push:$(RELEASE_VERSION)
+	@sbt docker:stage
+	@docker buildx  build --platform linux/amd64,linux/arm64 -t public.ecr.aws/sumologic/sumologic-kafka-push:$(RELEASE_VERSION) --push target/docker/stage/
 	@echo "Pushed docker image to public.ecr.aws/sumologic/sumologic-kafka-push:$(RELEASE_VERSION)"
 
+# Build and push dev image to GHCR (pre-requisite: setup-buildx)
 .PHONY: publish-docker-ghcr
 publish-docker-ghcr:	RELEASE_VERSION = $(shell grep -oE "[0-9]+\.[0-9]+\.[0-9]+" version.sbt)
 publish-docker-ghcr:
-	make build-base
-	@sbt docker:publishLocal
-	@docker image tag public.ecr.aws/sumologic/sumologic-kafka-push:$(RELEASE_VERSION) ghcr.io/sumologic/sumologic-kafka-push:$(RELEASE_VERSION)
-	@docker push ghcr.io/sumologic/sumologic-kafka-push:$(RELEASE_VERSION)
+	@sbt docker:stage
+	@docker buildx  build --platform linux/amd64,linux/arm64 -t ghcr.io/sumologic/sumologic-kafka-push:$(RELEASE_VERSION) --push target/docker/stage/
 	@echo "Pushed docker image to ghcr.io/sumologic/sumologic-kafka-push:$(RELEASE_VERSION)"
 
 # Lint helm chart

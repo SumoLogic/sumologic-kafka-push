@@ -1,7 +1,6 @@
 import Dependencies._
 import com.amazonaws.regions.{Region, Regions}
 import com.typesafe.sbt.packager.docker.DockerPlugin.autoImport._
-import scala.sys.process._
 
 lazy val dockerBuildxSettings = Seq(
       name := "sumologic-kafka-push",
@@ -41,7 +40,6 @@ lazy val dockerBuildxSettings = Seq(
         AkkaHttpJson4s,
         AkkaKafka,
         ApacheKafkaClient,
-//        ApacheKafkaConnect,
         PrometheusAkkaHttp,
         PrometheusClient,
         Re2j,
@@ -58,23 +56,13 @@ lazy val dockerBuildxSettings = Seq(
       daemonGroupGid in Docker := Some("1000"),
       dockerExposedPorts in Docker ++= Seq(8080),
       dockerRepository := Some("public.ecr.aws/sumologic"),
-      dockerUsername := Option(System.getenv("DOCKER_USERNAME")).orElse(None),
-      dockerBaseImage := "public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11",
-      publish in Docker := Def.sequential(
-        publishLocal in Docker
-      ).value
+      dockerBaseImage := "public.ecr.aws/sumologic/sumologic-kafka-push:focal-corretto-11-multiarch"
   ) 
 
 lazy val sumologicKafkaPush =
   Project(id = "sumologic-kafka-push", base = file("."))
     .enablePlugins(JavaAppPackaging)
     .enablePlugins(AshScriptPlugin)
-    .enablePlugins(DockerPlugin)
-    .enablePlugins(EcrPlugin)
     .enablePlugins(BuildInfoPlugin)
+    .enablePlugins(DockerPlugin)
     .settings(dockerBuildxSettings)
-
-region in Ecr := Region.getRegion(Regions.US_WEST_2)
-repositoryName in Ecr := "sumologic/sumologic-kafka-push"
-repositoryTags in Ecr := Seq(version.value)
-localDockerImage in Ecr := (dockerRepository in Docker).value.map(repo => s"$repo/").getOrElse("") + (packageName in Docker).value + ":" + (version in Docker).value
