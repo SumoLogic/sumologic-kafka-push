@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - 'release-v[0-9]+'
       - 'release-v[0-9]+.[0-9]+'
 
 jobs:
@@ -22,7 +23,7 @@ jobs:
         id: extract_tag
         run: echo "::set-output name=tag::$(echo $(git describe --tags --always))"
       - name: Print Tag
-        run: echo "Running dev build for  ${{ steps.extract_tag.outputs.tag }}"
+        run: echo "Running dev build for ${{ steps.extract_tag.outputs.tag }}"
       - name: Login to ECR
         run: make login-ecr
         env:
@@ -36,4 +37,3 @@ jobs:
           password: ${{ secrets.CR_PAT }}
       - name: Build and push docker image
         run: make publish-docker-ghcr BUILD_TAG=${{ steps.extract_tag.outputs.tag }}
-  

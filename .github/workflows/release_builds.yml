@@ -21,7 +21,7 @@ jobs:
         id: extract_tag
         run: echo "::set-output name=tag::$(echo $(git describe --tags --always))"
       - name: Print Tag
-        run: echo "Running build for  ${{ steps.extract_tag.outputs.tag }}"
+        run: echo "Running build for ${{ steps.extract_tag.outputs.tag }}"
       - name: Login to ECR
         run: make login-ecr
         env:
