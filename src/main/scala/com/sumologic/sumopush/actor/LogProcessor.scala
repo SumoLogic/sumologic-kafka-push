@@ -131,6 +131,7 @@ object LogProcessor extends MessageProcessor {
 
     val format = if (jsonOptions._3) SumoDataFormat.text else SumoDataFormat.json
     val wrapperKey = endpoint.jsonOptions.flatMap(_.payloadWrapperKey)
+    val moveFieldsIntoPayload = endpoint.jsonOptions.flatMap(_.moveFieldsIntoPayload).getOrElse(false)
 
     (sourceCategory, sourceName) match {
       case (Some(cat), Some(name)) =>
@@ -141,10 +142,8 @@ object LogProcessor extends MessageProcessor {
             List(findPayloadAndFields(jv, jsonOptions, wrapperKey, logger))
         }).map {
           case (payload, fields) =>
-            val request = payload match {
-              case v: String => LogRequest(Instant.now().toEpochMilli, v)
-              case map: Map[String, Any] => RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ map.toSeq).toMap)
-            }
+            val (request, filteredFields) = buildRequest(payload, fields, moveFieldsIntoPayload, wrapperKey)
+
             SumoRequest(
               key = DefaultLogKey(cat),
               dataType = SumoDataType.logs,
@@ -153,7 +152,7 @@ object LogProcessor extends MessageProcessor {
               sourceName = name,
               sourceCategory = cat,
               sourceHost = config.host,
-              fields = fields,
+              fields = filteredFields,
               endpoint = endpoint.uri,
               logs = Seq(request))
         }
@@ -166,7 +165,7 @@ object LogProcessor extends MessageProcessor {
   def findPayloadAndFields(json: JValue, jsonOptions: (Option[Map[String, JsonPath]], Option[JsonPath], Boolean, Boolean), key: Option[String], logger: Logger): (Any, Seq[HeaderField]) = {
     implicit val formats: Formats = DefaultFormats
     val moveFieldsIntoPayload = jsonOptions._4
-    val payloadWithOptions = (jsonOptions match {
+    val payload = (jsonOptions match {
       case (_, Some(jp), text, _) =>
         val value = jp.read(json).asInstanceOf[Any] match {
           case s: String => s
@@ -186,7 +185,22 @@ object LogProcessor extends MessageProcessor {
         }
         (text, value)
       case _ => (false, json.extract[Map[String, Any]])
-    })
+    }) match {
+      case (true, v) => v match {
+        case s: String => s
+        case v =>
+          if (moveFieldsIntoPayload) {
+            v
+          } else {
+            Serialization.write(v)
+          }
+      }
+      case (false, m: Map[_, _]) => key match {
+        case Some(wk) => Map(wk -> m)
+        case None => m.asInstanceOf[Map[String, Any]]
+      }
+      case (false, v) => Map(key.getOrElse(defaultJsonKey) -> v)
+    }
 
     val fields: Seq[HeaderField] = jsonOptions match {
       case (Some(m), _, _, _) => m.map {
@@ -203,31 +217,7 @@ object LogProcessor extends MessageProcessor {
       }.collect { case (k: String, v: String) => HeaderField(k, v) }.toSeq
       case _ => Seq.empty
     }
-
-    val payloadWithFields = payloadWithOptions match {
-      case (payloadText, m: Map[String, Any]) if moveFieldsIntoPayload =>
-        (payloadText, appendFieldsToPayload(m, fields))
-      case _ =>
-        payloadWithOptions
-    }
-
-    val payload = payloadWithFields match {
-      case (true, v) => v match {
-        case s: String => s
-        case v => Serialization.write(v)
-      }
-      case (false, m: Map[_, _]) => key match {
-        case Some(wk) => Map(wk -> m)
-        case None => m.asInstanceOf[Map[String, Any]]
-      }
-      case (false, v) => Map(key.getOrElse(defaultJsonKey) -> v)
-    }
-
-    if (moveFieldsIntoPayload) {
-      (payload, Seq.empty)
-    } else {
-      (payload, fields)
-    }
+    (payload, fields)
   }
 
   def findSourceNameOrCategory(fixed: Option[String], jsonPath: Option[JsonPath], fallback: Option[String], logEvent: JsonLogEvent): Option[String] = {
@@ -306,8 +296,33 @@ object LogProcessor extends MessageProcessor {
       None, Some(exclusion => exclusion.toBoolean))
   }
 
-  private def appendFieldsToPayload(payload: Map[String, Any], fields: Seq[HeaderField]): Map[String, Any] = {
+  private def buildRawJsonRequestWithFields(payload: Map[String, Any], fields: Seq[HeaderField]): RawJsonRequest = {
     val fieldsMap = fields.map(headerField => headerField.key -> headerField.value).toMap
-    payload ++ Map("metadata" -> fieldsMap)
+    if (fieldsMap.nonEmpty) {
+      val map = payload ++ Map("metadata" -> fieldsMap)
+      RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ map.toSeq).toMap)
+    } else {
+      RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ payload.toSeq).toMap)
+    }
+  }
+
+  private def buildRequest(payload: Any, fields: Seq[HeaderField], moveFieldsIntoPayload: Boolean, wrapperKey: Option[String]): (LogRecord, Seq[HeaderField]) = {
+    implicit val formats: Formats = DefaultFormats
+    if (moveFieldsIntoPayload) {
+      payload match {
+        case map: Map[String, Any] =>
+          val key = wrapperKey.getOrElse(defaultJsonKey)
+          val log = Map(key -> map.getOrElse(key, map))
+          (buildRawJsonRequestWithFields(log, fields), Seq.empty)
+        case s: String =>
+          val log = Map(wrapperKey.getOrElse(defaultJsonKey) -> s)
+          (buildRawJsonRequestWithFields(log, fields), Seq.empty)
+      }
+    } else {
+      payload match {
+        case s: String => (LogRequest(Instant.now().toEpochMilli, s), fields)
+        case map: Map[String, Any] => (RawJsonRequest((Map("timestamp" -> Instant.now().toEpochMilli).toSeq ++ map.toSeq).toMap), fields)
+      }
+    }
   }
 }
