@@ -1,0 +1,10 @@
+# Learn about CODEOWNERS file format:
+#  https://help.github.com/en/articles/about-code-owners
+
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# @rishiyemme @vsinghal13 will be requested for
+# review when someone opens a pull request.
+* @rishiyemme @vsinghal13
+
+/.github/* @SumoLogic/open-source-collection-team
