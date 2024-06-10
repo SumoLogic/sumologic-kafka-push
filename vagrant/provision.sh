@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -x
+ARCH="$(dpkg --print-architecture)"
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -9,7 +10,7 @@ apt-get --yes install apt-transport-https jq
 
 echo "export EDITOR=vim" >> /home/vagrant/.bashrc
 
-snap install microk8s --classic --channel=1.20/stable
+snap install microk8s --classic --channel=1.30/stable
 microk8s.status --wait-ready
 ufw allow in on cbr0
 ufw allow out on cbr0
@@ -47,26 +48,33 @@ echo "export KUBECONFIG=/var/snap/microk8s/current/credentials/kubelet.config" >
 HELM_3_VERSION=v3.5.4
 
 mkdir /opt/helm3
-curl "https://get.helm.sh/helm-${HELM_3_VERSION}-linux-amd64.tar.gz" | tar -xz -C /opt/helm3
+curl "https://get.helm.sh/helm-${HELM_3_VERSION}-linux-${ARCH}.tar.gz" | tar -xz -C /opt/helm3
 
-ln -s /opt/helm3/linux-amd64/helm /usr/bin/helm3
+ln -s /opt/helm3/linux-${ARCH}/helm /usr/bin/helm3
 ln -s /usr/bin/helm3 /usr/bin/helm
 
 usermod -a -G microk8s vagrant
 
 # install yq with access to file structure
-curl https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_amd64 -L -o /usr/local/bin/yq-3.4.1
+curl https://github.com/mikefarah/yq/releases/download/3.4.1/yq_linux_${ARCH} -L -o /usr/local/bin/yq-3.4.1
 chmod +x /usr/local/bin/yq-3.4.1
 ln -s /usr/local/bin/yq-3.4.1 /usr/local/bin/yq
 
 # Install docker
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   "deb [arch=${ARCH}] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
 apt-get install -y docker-ce docker-ce-cli containerd.io
 usermod -aG docker vagrant
+
+echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
+echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
+curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo -H gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/scalasbt-release.gpg --import
+sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
+
+sudo apt-get install -y sbt default-jre
 
 # Install docker-compose
 DOCKER_COMPOSE_VERSION=1.29.2
@@ -85,9 +93,9 @@ done
 
 apt-get install -y yamllint
 
-K9S_VERSION=v0.24.15
+K9S_VERSION=v0.32.4
 mkdir /opt/k9s
-curl -Lo- "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_x86_64.tar.gz" | tar -C /opt/k9s -xzf -
+curl -Lo- "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_${ARCH}.tar.gz" | tar -C /opt/k9s -xzf -
 ln -s /opt/k9s/k9s /usr/bin/k9s
 
 # Install Apache Kafka
