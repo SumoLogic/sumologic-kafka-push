@@ -1,27 +1,29 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-unless Vagrant.has_plugin?("vagrant-disksize")
-    puts "vagrant-disksize plugin unavailable\n" +
-         "please install it via 'vagrant plugin install vagrant-disksize'"
-    exit 1
+Vagrant.configure('2') do |config|
+  config.vm.box = 'ubuntu/focal64'
+  config.vm.disk :disk, size: "50GB", primary: true
+  config.vm.box_check_update = false
+  config.vm.host_name = 'sumologic-kafka-push'
+  config.vm.network :private_network, ip: "192.168.52.35"
+
+  config.vm.provider 'virtualbox' do |vb|
+    vb.gui = false
+    vb.cpus = 8
+    vb.memory = 16384
+    vb.name = 'sumologic-kafka-push'
   end
-  
-  Vagrant.configure('2') do |config|
-    config.vm.box = 'ubuntu/focal64'
-    config.disksize.size = '50GB'
-    config.vm.box_check_update = false
-    config.vm.host_name = 'sumologic-kafka-push'
-    config.vm.network :private_network, ip: "192.168.52.35"
-  
-    config.vm.provider 'virtualbox' do |vb|
-      vb.gui = false
-      vb.cpus = 8
-      vb.memory = 16384
-      vb.name = 'sumologic-kafka-push'
-    end
-  
-    config.vm.provision 'shell', path: 'vagrant/provision.sh'
-  
-    config.vm.synced_folder ".", "/sumologic"
+
+  config.vm.provider "qemu" do |qe, override|
+    override.vm.box = "perk/ubuntu-2204-arm64"
+    qe.gui = false
+    qe.smp = 8
+    qe.memory = 16384
+    qe.name = 'sumologic-kafka-push'
   end
+
+  config.vm.provision 'shell', path: 'vagrant/provision.sh'
+
+  config.vm.synced_folder ".", "/sumologic"
+end
