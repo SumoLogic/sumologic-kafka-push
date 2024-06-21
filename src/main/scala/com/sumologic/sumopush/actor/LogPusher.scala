@@ -54,7 +54,7 @@ object LogPusher {
       val merge = builder.add(Merge[Seq[CommittableOffset]](2))
       val pool = Http()(system).superPool[PushRequest]()
       val httpFlow: Flow[(SumoRequest, Seq[CommittableOffset]), Try[Seq[CommittableOffset]], NotUsed] = Flow[(SumoRequest, Seq[CommittableOffset])]
-        .map { case (sumoRequest, offsets) => createHttpRequest(sumoRequest, offsets, config.encoding) }
+        .map { case (sumoRequest, offsets) => createHttpRequest(sumoRequest, offsets, config) }
         .via(pool)
         .map {
           case (Success(HttpResponse(StatusCodes.OK, _, _, _)), pushRequest) =>
@@ -90,11 +90,17 @@ object LogPusher {
     }
     })
 
-  private def createHttpRequest(sumoRequest: SumoRequest, offsets: Seq[CommittableOffset], encoding: String): (HttpRequest, PushRequest) = {
-    val requestBytes = sumoRequest.format match {
-      case SumoDataFormat.json => SumoLogsSerializer.toJson(sumoRequest).getBytes(UTF_8)
-      case SumoDataFormat.text => sumoRequest.logs.map(_.log).mkString("\n").getBytes(UTF_8)
-      case f => throw new UnsupportedOperationException(s"Unsupported sumo format $f")
+  private def createHttpRequest(sumoRequest: SumoRequest, offsets: Seq[CommittableOffset], config: AppConfig): (HttpRequest, PushRequest) = {
+    val endpoint = config.sumoEndpoints.find { case (_, endpoint) => endpoint.default }.map(_._2).get
+    val moveFieldsIntoPayload = endpoint.jsonOptions.flatMap(_.moveFieldsIntoPayload).getOrElse(false)
+    val requestBytes = if (moveFieldsIntoPayload) {
+      SumoLogsSerializer.toJson(sumoRequest).getBytes(UTF_8)
+    } else {
+      sumoRequest.format match {
+        case SumoDataFormat.json => SumoLogsSerializer.toJson(sumoRequest).getBytes(UTF_8)
+        case SumoDataFormat.text => sumoRequest.logs.map(_.log).mkString("\n").getBytes(UTF_8)
+        case f => throw new UnsupportedOperationException(s"Unsupported sumo format $f")
+      }
     }
 
     log.debug("Source: {}, bytes: {}, endpoint: {}", sumoRequest.sourceName, requestBytes.length, sumoRequest.endpointName)
@@ -112,7 +118,7 @@ object LogPusher {
       .withMethod(HttpMethods.POST)
       .withHeaders(headers.toSeq)
       .withEntity(HttpEntity.Strict(contentType = sumoRequest.dataType.contentType, ByteString(requestBytes)))
-    (encodeRequest(request, encoding), PushRequest(sumoRequest.endpointName, requestBytes.length, offsets))
+    (encodeRequest(request, config.encoding), PushRequest(sumoRequest.endpointName, requestBytes.length, offsets))
   }
 
   def encodeRequest(request: HttpRequest, encoding: String): HttpRequest = {
