@@ -1,4 +1,4 @@
-FROM ubuntu:focal
+FROM ubuntu:20.04
 LABEL MAINTAINER Cecil Moore <cmoore@sumologic.com>
 
 RUN apt-get update && apt-get install -y wget && \ 
